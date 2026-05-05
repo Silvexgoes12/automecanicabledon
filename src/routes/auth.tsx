@@ -10,7 +10,7 @@ import { Cog } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Entrar | Diesel Mecânica" }] }),
+  head: () => ({ meta: [{ title: "Entrar | Auto Mecânica Bledon" }] }),
 });
 
 function AuthPage() {
@@ -59,7 +59,7 @@ function AuthPage() {
             <Cog className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Diesel Mecânica</h1>
+            <h1 className="text-xl font-bold">Auto Mecânica Bledon</h1>
             <p className="text-sm text-muted-foreground">Sistema de gestão & CRM</p>
           </div>
         </div>
