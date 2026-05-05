@@ -51,9 +51,33 @@ function Dashboard() {
   const totalDespesa = series.reduce((s, x) => s + x.despesa, 0);
   const lucro = totalReceita - totalDespesa;
 
+  const catLabels: Record<string, string> = {
+    folha_pagamento: "Folha de Pagamento",
+    impostos: "Impostos",
+    compra_pecas: "Compra de Peças",
+    encargos_sociais: "Encargos Sociais",
+    aluguel: "Aluguel",
+    energia: "Energia Elétrica",
+    compra_lubrificantes: "Lubrificantes",
+    contabilidade: "Contabilidade",
+    agua: "Água",
+    internet: "Internet",
+    telefone: "Telefone",
+    manutencao: "Manutenção",
+    marketing: "Marketing",
+    seguros: "Seguros",
+    combustivel: "Combustível",
+    material_escritorio: "Material de Escritório",
+    epi: "EPI",
+    treinamento: "Treinamento",
+    transporte: "Transporte",
+    outros: "Outros",
+  };
+  const prettyCat = (k: string) => catLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const byCat: Record<string, number> = {};
   data.desp.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
-  const catData = Object.entries(byCat).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+  const catData = Object.entries(byCat).map(([name, value]) => ({ name: prettyCat(name), value })).sort((a, b) => b.value - a.value).slice(0, 8);
+  const totalCat = catData.reduce((s, x) => s + x.value, 0);
 
   const stat = (label: string, value: string, sub: string, Icon: any, tone: string) => (
     <Card className="p-5">
@@ -123,16 +147,44 @@ function Dashboard() {
           </div>
         </Card>
         <Card className="p-5">
-          <h2 className="font-semibold mb-4">Top categorias de despesa</h2>
-          <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={catData} dataKey="value" nameKey="name" outerRadius={100} label={(e: any) => e.name}>
-                  {catData.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
-                </Pie>
-                <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
-              </PieChart>
-            </ResponsiveContainer>
+          <h2 className="font-semibold mb-1">Top categorias de despesa</h2>
+          <p className="text-xs text-muted-foreground mb-4">Distribuição dos gastos no período</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <div style={{ width: "100%", height: 240 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={catData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={55}
+                    outerRadius={95}
+                    paddingAngle={2}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
+                  >
+                    {catData.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v: any) => fmtBRL(Number(v))}
+                    contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <ul className="space-y-2 text-sm">
+              {catData.map((c, i) => {
+                const pct = ((c.value / Math.max(totalCat, 1)) * 100).toFixed(1);
+                return (
+                  <li key={c.name} className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: C[i % C.length] }} />
+                    <span className="flex-1 truncate">{c.name}</span>
+                    <span className="text-muted-foreground tabular-nums text-xs">{pct}%</span>
+                    <span className="font-medium tabular-nums text-xs w-20 text-right">{fmtBRL(c.value)}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </Card>
       </div>
