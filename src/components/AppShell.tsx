@@ -35,7 +35,7 @@ export function AppShell() {
             <Cog className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="font-bold text-sm leading-tight">Diesel Mecânica</div>
+            <div className="font-bold text-sm leading-tight">Auto Mecânica Bledon</div>
             <div className="text-xs text-sidebar-foreground/60">Gestão & CRM</div>
           </div>
         </div>
