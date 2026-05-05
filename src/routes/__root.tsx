@@ -29,14 +29,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "CRM BLEDON" },
+      { name: "description", content: "Diesel Dynamics Database manages fictional diesel mechanic shop data, including expenses and CRM, for analysis." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "CRM BLEDON" },
+      { property: "og:description", content: "Diesel Dynamics Database manages fictional diesel mechanic shop data, including expenses and CRM, for analysis." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "CRM BLEDON" },
+      { name: "twitter:description", content: "Diesel Dynamics Database manages fictional diesel mechanic shop data, including expenses and CRM, for analysis." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8b6fb12d-a07d-4aa1-9b8e-e455ded0c335/id-preview-dfe240c9--cfe8365d-333d-48b7-9cbc-7ccad3e6166f.lovable.app-1777944456430.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8b6fb12d-a07d-4aa1-9b8e-e455ded0c335/id-preview-dfe240c9--cfe8365d-333d-48b7-9cbc-7ccad3e6166f.lovable.app-1777944456430.png" },
     ],
     links: [
       {
