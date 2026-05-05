@@ -51,9 +51,33 @@ function Dashboard() {
   const totalDespesa = series.reduce((s, x) => s + x.despesa, 0);
   const lucro = totalReceita - totalDespesa;
 
+  const catLabels: Record<string, string> = {
+    folha_pagamento: "Folha de Pagamento",
+    impostos: "Impostos",
+    compra_pecas: "Compra de Peças",
+    encargos_sociais: "Encargos Sociais",
+    aluguel: "Aluguel",
+    energia: "Energia Elétrica",
+    compra_lubrificantes: "Lubrificantes",
+    contabilidade: "Contabilidade",
+    agua: "Água",
+    internet: "Internet",
+    telefone: "Telefone",
+    manutencao: "Manutenção",
+    marketing: "Marketing",
+    seguros: "Seguros",
+    combustivel: "Combustível",
+    material_escritorio: "Material de Escritório",
+    epi: "EPI",
+    treinamento: "Treinamento",
+    transporte: "Transporte",
+    outros: "Outros",
+  };
+  const prettyCat = (k: string) => catLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const byCat: Record<string, number> = {};
   data.desp.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
-  const catData = Object.entries(byCat).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+  const catData = Object.entries(byCat).map(([name, value]) => ({ name: prettyCat(name), value })).sort((a, b) => b.value - a.value).slice(0, 8);
+  const totalCat = catData.reduce((s, x) => s + x.value, 0);
 
   const stat = (label: string, value: string, sub: string, Icon: any, tone: string) => (
     <Card className="p-5">
