@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppVeiculosRouteImport } from './routes/app.veiculos'
 import { Route as AppOrdensRouteImport } from './routes/app.ordens'
+import { Route as AppDespesasRouteImport } from './routes/app.despesas'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 
 const AuthRoute = AuthRouteImport.update({
@@ -47,6 +48,11 @@ const AppOrdensRoute = AppOrdensRouteImport.update({
   path: '/ordens',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDespesasRoute = AppDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/despesas': typeof AppDespesasRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app/': typeof AppIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/despesas': typeof AppDespesasRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app': typeof AppIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/despesas': typeof AppDespesasRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app/': typeof AppIndexRoute
@@ -87,17 +96,26 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/app/clientes'
+    | '/app/despesas'
     | '/app/ordens'
     | '/app/veiculos'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app/clientes' | '/app/ordens' | '/app/veiculos' | '/app'
+  to:
+    | '/'
+    | '/auth'
+    | '/app/clientes'
+    | '/app/despesas'
+    | '/app/ordens'
+    | '/app/veiculos'
+    | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/auth'
     | '/app/clientes'
+    | '/app/despesas'
     | '/app/ordens'
     | '/app/veiculos'
     | '/app/'
@@ -153,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrdensRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/despesas': {
+      id: '/app/despesas'
+      path: '/despesas'
+      fullPath: '/app/despesas'
+      preLoaderRoute: typeof AppDespesasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/clientes': {
       id: '/app/clientes'
       path: '/clientes'
@@ -165,6 +190,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppClientesRoute: typeof AppClientesRoute
+  AppDespesasRoute: typeof AppDespesasRoute
   AppOrdensRoute: typeof AppOrdensRoute
   AppVeiculosRoute: typeof AppVeiculosRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -172,6 +198,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppClientesRoute: AppClientesRoute,
+  AppDespesasRoute: AppDespesasRoute,
   AppOrdensRoute: AppOrdensRoute,
   AppVeiculosRoute: AppVeiculosRoute,
   AppIndexRoute: AppIndexRoute,
