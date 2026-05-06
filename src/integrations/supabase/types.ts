@@ -322,6 +322,63 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos: {
+        Row: {
+          categoria: string
+          cliente_fornecedor: string | null
+          conta: Database["public"]["Enums"]["lancamento_conta"]
+          created_at: string
+          data: string
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string
+          forma_pagamento: string | null
+          id: string
+          observacoes: string | null
+          os_id: string | null
+          status: Database["public"]["Enums"]["lancamento_status"]
+          subcategoria: string | null
+          tipo: Database["public"]["Enums"]["lancamento_tipo"]
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          cliente_fornecedor?: string | null
+          conta?: Database["public"]["Enums"]["lancamento_conta"]
+          created_at?: string
+          data: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao: string
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          os_id?: string | null
+          status?: Database["public"]["Enums"]["lancamento_status"]
+          subcategoria?: string | null
+          tipo: Database["public"]["Enums"]["lancamento_tipo"]
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          cliente_fornecedor?: string | null
+          conta?: Database["public"]["Enums"]["lancamento_conta"]
+          created_at?: string
+          data?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          os_id?: string | null
+          status?: Database["public"]["Enums"]["lancamento_status"]
+          subcategoria?: string | null
+          tipo?: Database["public"]["Enums"]["lancamento_tipo"]
+          valor?: number
+        }
+        Relationships: []
+      }
       ordens_servico: {
         Row: {
           cliente_id: string
@@ -691,6 +748,9 @@ export type Database = {
         | "cartao_credito"
         | "boleto"
         | "transferencia"
+      lancamento_conta: "caixa" | "banco" | "cartao"
+      lancamento_status: "previsto" | "realizado"
+      lancamento_tipo: "entrada" | "saida"
       status_os:
         | "aberta"
         | "em_andamento"
@@ -882,6 +942,9 @@ export const Constants = {
         "boleto",
         "transferencia",
       ],
+      lancamento_conta: ["caixa", "banco", "cartao"],
+      lancamento_status: ["previsto", "realizado"],
+      lancamento_tipo: ["entrada", "saida"],
       status_os: [
         "aberta",
         "em_andamento",

@@ -1,11 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog } from "lucide-react";
+import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
   { to: "/app/clientes", label: "Clientes", icon: Users },
   { to: "/app/veiculos", label: "Veículos", icon: Car },
   { to: "/app/ordens", label: "Ordens de Serviço", icon: Wrench },
