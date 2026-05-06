@@ -17,6 +17,7 @@ const C = ["#c2410c","#0369a1","#15803d","#b45309","#7c3aed"];
 
 function Dashboard() {
   const [data, setData] = useState<any>(null);
+  const [year, setYear] = useState<"all" | "2024" | "2025">("all");
 
   useEffect(() => { (async () => {
     const [cli, vei, os, desp] = await Promise.all([
