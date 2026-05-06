@@ -81,7 +81,7 @@ function Dashboard() {
   };
   const prettyCat = (k: string) => catLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const byCat: Record<string, number> = {};
-  data.desp.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
+  despFiltered.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
   const catData = Object.entries(byCat).map(([name, value]) => ({ name: prettyCat(name), value })).sort((a, b) => b.value - a.value).slice(0, 8);
   const totalCat = catData.reduce((s, x) => s + x.value, 0);
 
