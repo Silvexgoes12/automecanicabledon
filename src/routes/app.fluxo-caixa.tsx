@@ -199,9 +199,9 @@ function FluxoCaixa() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-                  ) : rows.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum lançamento. Clique em "Novo Lançamento".</td></tr>
-                  ) : rows.map((r) => (
+                  ) : rows.filter(r => (r.data || "").startsWith(year)).length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum lançamento em {year}.</td></tr>
+                  ) : rows.filter(r => (r.data || "").startsWith(year)).map((r) => (
                     <tr key={r.id} className="border-t hover:bg-muted/30">
                       <td className="px-4 py-3">{fmtDate(r.data)}</td>
                       <td className="px-4 py-3">
