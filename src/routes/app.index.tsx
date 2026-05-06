@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { fmtBRL, fmtNum } from "@/lib/format";
 import { Wrench, Users, Car, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid } from "recharts";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -16,6 +17,7 @@ const C = ["#c2410c","#0369a1","#15803d","#b45309","#7c3aed"];
 
 function Dashboard() {
   const [data, setData] = useState<any>(null);
+  const [year, setYear] = useState<"all" | "2024" | "2025">("all");
 
   useEffect(() => { (async () => {
     const [cli, vei, os, desp] = await Promise.all([
@@ -29,8 +31,12 @@ function Dashboard() {
 
   if (!data) return <div className="p-8">Carregando...</div>;
 
+  const inYear = (d: string) => year === "all" || (d || "").startsWith(year);
+  const osFiltered = data.os.filter((o: any) => inYear(o.data_abertura));
+  const despFiltered = data.desp.filter((d: any) => inYear(d.data));
+
   const monthly: Record<string, { mes: string; receita: number; despesa: number; os: number }> = {};
-  data.os.forEach((o: any) => {
+  osFiltered.forEach((o: any) => {
     const m = (o.data_abertura || "").slice(0, 7);
     if (!m) return;
     monthly[m] = monthly[m] || { mes: m, receita: 0, despesa: 0, os: 0 };
@@ -39,7 +45,7 @@ function Dashboard() {
       monthly[m].os += 1;
     }
   });
-  data.desp.forEach((d: any) => {
+  despFiltered.forEach((d: any) => {
     const m = (d.data || "").slice(0, 7);
     if (!m) return;
     monthly[m] = monthly[m] || { mes: m, receita: 0, despesa: 0, os: 0 };
@@ -75,7 +81,7 @@ function Dashboard() {
   };
   const prettyCat = (k: string) => catLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const byCat: Record<string, number> = {};
-  data.desp.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
+  despFiltered.forEach((d: any) => { byCat[d.categoria] = (byCat[d.categoria] || 0) + Number(d.valor); });
   const catData = Object.entries(byCat).map(([name, value]) => ({ name: prettyCat(name), value })).sort((a, b) => b.value - a.value).slice(0, 8);
   const totalCat = catData.reduce((s, x) => s + x.value, 0);
 
@@ -96,22 +102,39 @@ function Dashboard() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Visão geral 2024-2025</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
+            {year === "all" ? "Visão geral 2024-2025" : `Exercício ${year}`}
+          </p>
+        </div>
+        <div className="inline-flex rounded-md border bg-card p-1">
+          {(["all","2024","2025"] as const).map((y) => (
+            <Button
+              key={y}
+              size="sm"
+              variant={year === y ? "default" : "ghost"}
+              className="h-8 px-3"
+              onClick={() => setYear(y)}
+            >
+              {y === "all" ? "Todos" : y}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stat("Receita Total", fmtBRL(totalReceita), "Período completo", DollarSign, "bg-success/15 text-success")}
-        {stat("Despesa Total", fmtBRL(totalDespesa), "Período completo", TrendingDown, "bg-destructive/15 text-destructive")}
+        {stat("Receita Total", fmtBRL(totalReceita), year === "all" ? "Período completo" : `Exercício ${year}`, DollarSign, "bg-success/15 text-success")}
+        {stat("Despesa Total", fmtBRL(totalDespesa), year === "all" ? "Período completo" : `Exercício ${year}`, TrendingDown, "bg-destructive/15 text-destructive")}
         {stat("Lucro Bruto", fmtBRL(lucro), `${((lucro / Math.max(totalReceita, 1)) * 100).toFixed(1)}% margem`, TrendingUp, "bg-primary/15 text-primary")}
-        {stat("Ordens de Serviço", fmtNum(data.os.length), "Total no período", Wrench, "bg-chart-2/15 text-chart-2")}
+        {stat("Ordens de Serviço", fmtNum(osFiltered.length), year === "all" ? "Total no período" : `Em ${year}`, Wrench, "bg-chart-2/15 text-chart-2")}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stat("Clientes", fmtNum(data.cli), "Cadastrados", Users, "bg-accent text-accent-foreground")}
         {stat("Veículos", fmtNum(data.vei), "Na base", Car, "bg-chart-3/15 text-chart-3")}
-        {stat("Ticket Médio", fmtBRL(totalReceita / Math.max(data.os.length, 1)), "Por OS", DollarSign, "bg-chart-4/15 text-chart-4")}
+        {stat("Ticket Médio", fmtBRL(totalReceita / Math.max(osFiltered.length, 1)), "Por OS", DollarSign, "bg-chart-4/15 text-chart-4")}
       </div>
 
       <Card className="p-5">
