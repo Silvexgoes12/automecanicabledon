@@ -45,8 +45,13 @@ function FluxoCaixa() {
   const [rows, setRows] = useState<Lanc[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [year, setYear] = useState<"2024" | "2025" | "2026">("2025");
+  const [month, setMonth] = useState(`${"2025"}-01`);
   const [saldoInicial, setSaldoInicial] = useState(0);
+
+  useEffect(() => {
+    setMonth((m) => `${year}-${m.slice(5) || "01"}`);
+  }, [year]);
 
   const load = async () => {
     setLoading(true);
