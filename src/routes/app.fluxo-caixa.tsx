@@ -146,8 +146,13 @@ function FluxoCaixa() {
           <h1 className="text-2xl font-bold">Fluxo de Caixa</h1>
           <p className="text-muted-foreground text-sm">Controle completo de entradas, saídas e projeções</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-md border bg-card p-1">
+            {(["2024","2025","2026"] as const).map((y) => (
+              <Button key={y} size="sm" variant={year === y ? "default" : "ghost"} className="h-8 px-3" onClick={() => setYear(y)}>{y}</Button>
+            ))}
+          </div>
+          <Input type="month" value={month} min={`${year}-01`} max={`${year}-12`} onChange={(e) => e.target.value.startsWith(year) && setMonth(e.target.value)} className="w-44" />
           <Input type="number" value={saldoInicial} onChange={(e) => setSaldoInicial(Number(e.target.value))} placeholder="Saldo inicial" className="w-36" />
           <NovoLancamento onSaved={load} open={open} setOpen={setOpen} />
         </div>
