@@ -134,7 +134,7 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stat("Clientes", fmtNum(data.cli), "Cadastrados", Users, "bg-accent text-accent-foreground")}
         {stat("Veículos", fmtNum(data.vei), "Na base", Car, "bg-chart-3/15 text-chart-3")}
-        {stat("Ticket Médio", fmtBRL(totalReceita / Math.max(data.os.length, 1)), "Por OS", DollarSign, "bg-chart-4/15 text-chart-4")}
+        {stat("Ticket Médio", fmtBRL(totalReceita / Math.max(osFiltered.length, 1)), "Por OS", DollarSign, "bg-chart-4/15 text-chart-4")}
       </div>
 
       <Card className="p-5">
