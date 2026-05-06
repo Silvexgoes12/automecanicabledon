@@ -31,8 +31,12 @@ function Dashboard() {
 
   if (!data) return <div className="p-8">Carregando...</div>;
 
+  const inYear = (d: string) => year === "all" || (d || "").startsWith(year);
+  const osFiltered = data.os.filter((o: any) => inYear(o.data_abertura));
+  const despFiltered = data.desp.filter((d: any) => inYear(d.data));
+
   const monthly: Record<string, { mes: string; receita: number; despesa: number; os: number }> = {};
-  data.os.forEach((o: any) => {
+  osFiltered.forEach((o: any) => {
     const m = (o.data_abertura || "").slice(0, 7);
     if (!m) return;
     monthly[m] = monthly[m] || { mes: m, receita: 0, despesa: 0, os: 0 };
