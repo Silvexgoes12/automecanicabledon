@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
   { to: "/app/clientes", label: "Clientes", icon: Users },
   { to: "/app/veiculos", label: "Veículos", icon: Car },
   { to: "/app/ordens", label: "Ordens de Serviço", icon: Wrench },
