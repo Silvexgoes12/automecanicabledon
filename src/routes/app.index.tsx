@@ -102,16 +102,33 @@ function Dashboard() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Visão geral 2024-2025</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
+            {year === "all" ? "Visão geral 2024-2025" : `Exercício ${year}`}
+          </p>
+        </div>
+        <div className="inline-flex rounded-md border bg-card p-1">
+          {(["all","2024","2025"] as const).map((y) => (
+            <Button
+              key={y}
+              size="sm"
+              variant={year === y ? "default" : "ghost"}
+              className="h-8 px-3"
+              onClick={() => setYear(y)}
+            >
+              {y === "all" ? "Todos" : y}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stat("Receita Total", fmtBRL(totalReceita), "Período completo", DollarSign, "bg-success/15 text-success")}
-        {stat("Despesa Total", fmtBRL(totalDespesa), "Período completo", TrendingDown, "bg-destructive/15 text-destructive")}
+        {stat("Receita Total", fmtBRL(totalReceita), year === "all" ? "Período completo" : `Exercício ${year}`, DollarSign, "bg-success/15 text-success")}
+        {stat("Despesa Total", fmtBRL(totalDespesa), year === "all" ? "Período completo" : `Exercício ${year}`, TrendingDown, "bg-destructive/15 text-destructive")}
         {stat("Lucro Bruto", fmtBRL(lucro), `${((lucro / Math.max(totalReceita, 1)) * 100).toFixed(1)}% margem`, TrendingUp, "bg-primary/15 text-primary")}
-        {stat("Ordens de Serviço", fmtNum(data.os.length), "Total no período", Wrench, "bg-chart-2/15 text-chart-2")}
+        {stat("Ordens de Serviço", fmtNum(osFiltered.length), year === "all" ? "Total no período" : `Em ${year}`, Wrench, "bg-chart-2/15 text-chart-2")}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
