@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { fmtBRL, fmtNum } from "@/lib/format";
 import { Wrench, Users, Car, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid } from "recharts";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
