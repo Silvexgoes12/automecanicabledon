@@ -45,7 +45,7 @@ function Dashboard() {
       monthly[m].os += 1;
     }
   });
-  data.desp.forEach((d: any) => {
+  despFiltered.forEach((d: any) => {
     const m = (d.data || "").slice(0, 7);
     if (!m) return;
     monthly[m] = monthly[m] || { mes: m, receita: 0, despesa: 0, os: 0 };
