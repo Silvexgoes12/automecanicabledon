@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InstallPWAButton } from "@/components/InstallPWAButton";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
