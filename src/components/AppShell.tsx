@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InstallPWAButton } from "@/components/InstallPWAButton";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -59,7 +60,8 @@ export function AppShell() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-2">
+          <InstallPWAButton />
           <div className="text-xs text-sidebar-foreground/60 mb-2 truncate px-2">{email}</div>
           <Button
             variant="ghost"
