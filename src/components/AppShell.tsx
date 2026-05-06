@@ -60,7 +60,8 @@ export function AppShell() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-2">
+          <InstallPWAButton />
           <div className="text-xs text-sidebar-foreground/60 mb-2 truncate px-2">{email}</div>
           <Button
             variant="ghost"
