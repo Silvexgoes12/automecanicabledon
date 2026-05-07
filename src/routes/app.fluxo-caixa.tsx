@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fmtBRL, fmtDate } from "@/lib/format";
-import { Plus, Trash2, AlertTriangle, TrendingUp, TrendingDown, Wallet, Target } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, TrendingUp, TrendingDown, Wallet, Target, Upload, Download, FileText, ArrowLeftRight, Printer } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 
@@ -37,9 +37,12 @@ type Lanc = {
   observacoes: string | null;
 };
 
-const CAT_ENT = ["Serviços", "Venda de Peças", "Outras Receitas"];
-const CAT_SAI = ["Folha de Pagamento", "Compra de Peças", "Aluguel", "Energia", "Água", "Internet", "Impostos", "Encargos Sociais", "Contabilidade", "Marketing", "Manutenção", "Combustível", "EPI", "Outros"];
+const CAT_ENT = ["Serviços", "Venda de Peças", "Outras Receitas", "Transferência"];
+const CAT_SAI = ["Folha de Pagamento", "Compra de Peças", "Aluguel", "Energia", "Água", "Internet", "Impostos", "Encargos Sociais", "Contabilidade", "Marketing", "Manutenção", "Combustível", "EPI", "Outros", "Transferência"];
+const CUSTOS_VARIAVEIS = new Set(["Compra de Peças"]);
 const C = ["#15803d", "#c2410c", "#0369a1", "#b45309", "#7c3aed", "#be185d", "#0d9488", "#65a30d"];
+const CONTAS: ("caixa" | "banco" | "cartao")[] = ["caixa", "banco", "cartao"];
+const CONTA_LABEL: Record<string, string> = { caixa: "Caixa", banco: "Banco", cartao: "Cartão" };
 
 function FluxoCaixa() {
   const [rows, setRows] = useState<Lanc[]>([]);
@@ -48,6 +51,7 @@ function FluxoCaixa() {
   const [year, setYear] = useState<"2024" | "2025" | "2026">("2025");
   const [month, setMonth] = useState(`${"2025"}-01`);
   const [saldoInicial, setSaldoInicial] = useState(0);
+  const [saldosIniciais, setSaldosIniciais] = useState<Record<string, number>>({ caixa: 0, banco: 0, cartao: 0 });
 
   useEffect(() => {
     setMonth((m) => `${year}-${m.slice(5) || "01"}`);
@@ -65,24 +69,22 @@ function FluxoCaixa() {
   const realizadosMes = rows.filter((r) => r.status === "realizado" && inMonth(r.data));
   const previstosMes = rows.filter((r) => r.status === "previsto" && inMonth(r.data_vencimento || r.data));
 
-  const entradasMes = realizadosMes.filter((r) => r.tipo === "entrada").reduce((s, r) => s + Number(r.valor), 0);
-  const saidasMes = realizadosMes.filter((r) => r.tipo === "saida").reduce((s, r) => s + Number(r.valor), 0);
+  const entradasMes = realizadosMes.filter((r) => r.tipo === "entrada" && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
+  const saidasMes = realizadosMes.filter((r) => r.tipo === "saida" && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
   const resultado = entradasMes - saidasMes;
   const margem = entradasMes > 0 ? (resultado / entradasMes) * 100 : 0;
 
-  // Mês anterior para comparação
   const prevMonth = (() => {
     const [y, m] = month.split("-").map(Number);
     const d = new Date(y, m - 2, 1);
     return d.toISOString().slice(0, 7);
   })();
   const realizadosPrev = rows.filter((r) => r.status === "realizado" && (r.data || "").startsWith(prevMonth));
-  const entradasPrev = realizadosPrev.filter((r) => r.tipo === "entrada").reduce((s, r) => s + Number(r.valor), 0);
-  const saidasPrev = realizadosPrev.filter((r) => r.tipo === "saida").reduce((s, r) => s + Number(r.valor), 0);
+  const entradasPrev = realizadosPrev.filter((r) => r.tipo === "entrada" && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
+  const saidasPrev = realizadosPrev.filter((r) => r.tipo === "saida" && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
   const resultadoPrev = entradasPrev - saidasPrev;
   const varReceita = entradasPrev > 0 ? ((entradasMes - entradasPrev) / entradasPrev) * 100 : 0;
 
-  // Fluxo diário do mês
   const fluxoDiario = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
     const days = new Date(y, m, 0).getDate();
@@ -97,7 +99,6 @@ function FluxoCaixa() {
     });
   }, [realizadosMes, month, saldoInicial]);
 
-  // Fluxo projetado próximos 30 dias
   const projetado = useMemo(() => {
     const out: { data: string; entradas: number; saidas: number; saldo: number }[] = [];
     let saldo = entradasMes - saidasMes + saldoInicial;
@@ -114,18 +115,64 @@ function FluxoCaixa() {
     return out;
   }, [rows, entradasMes, saidasMes, saldoInicial]);
 
-  // Por categoria (saídas)
   const porCategoria = useMemo(() => {
     const map: Record<string, number> = {};
-    realizadosMes.filter((r) => r.tipo === "saida").forEach((r) => { map[r.categoria] = (map[r.categoria] || 0) + Number(r.valor); });
+    realizadosMes.filter((r) => r.tipo === "saida" && r.categoria !== "Transferência").forEach((r) => { map[r.categoria] = (map[r.categoria] || 0) + Number(r.valor); });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [realizadosMes]);
+
+  // ============ DRE ============
+  const dre = useMemo(() => {
+    const receitaBruta = entradasMes;
+    const custoVariavel = realizadosMes.filter((r) => r.tipo === "saida" && CUSTOS_VARIAVEIS.has(r.categoria)).reduce((s, r) => s + Number(r.valor), 0);
+    const margemContribuicao = receitaBruta - custoVariavel;
+    const custosFixos = realizadosMes.filter((r) => r.tipo === "saida" && !CUSTOS_VARIAVEIS.has(r.categoria) && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
+    const lucroLiquido = margemContribuicao - custosFixos;
+    const margemBruta = receitaBruta > 0 ? (margemContribuicao / receitaBruta) * 100 : 0;
+    const margemLiquida = receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0;
+    const percentVariavel = receitaBruta > 0 ? (custoVariavel / receitaBruta) * 100 : 0;
+    const percentFixo = receitaBruta > 0 ? (custosFixos / receitaBruta) * 100 : 0;
+    const indiceContribuicao = receitaBruta > 0 ? margemContribuicao / receitaBruta : 0;
+    const peReceita = indiceContribuicao > 0 ? custosFixos / indiceContribuicao : 0;
+    const fixosPorCat: Record<string, number> = {};
+    realizadosMes.filter((r) => r.tipo === "saida" && !CUSTOS_VARIAVEIS.has(r.categoria) && r.categoria !== "Transferência").forEach((r) => { fixosPorCat[r.categoria] = (fixosPorCat[r.categoria] || 0) + Number(r.valor); });
+    return { receitaBruta, custoVariavel, margemContribuicao, custosFixos, lucroLiquido, margemBruta, margemLiquida, percentVariavel, percentFixo, peReceita, fixosPorCat };
+  }, [realizadosMes, entradasMes]);
+
+  // DRE histórico (últimos 6 meses)
+  const dreHistorico = useMemo(() => {
+    const out: { mes: string; receita: number; lucro: number; margem: number }[] = [];
+    const [y, m] = month.split("-").map(Number);
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(y, m - 1 - i, 1);
+      const ms = d.toISOString().slice(0, 7);
+      const reals = rows.filter((r) => r.status === "realizado" && (r.data || "").startsWith(ms));
+      const rec = reals.filter((r) => r.tipo === "entrada" && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
+      const cv = reals.filter((r) => r.tipo === "saida" && CUSTOS_VARIAVEIS.has(r.categoria)).reduce((s, r) => s + Number(r.valor), 0);
+      const cf = reals.filter((r) => r.tipo === "saida" && !CUSTOS_VARIAVEIS.has(r.categoria) && r.categoria !== "Transferência").reduce((s, r) => s + Number(r.valor), 0);
+      const lucro = rec - cv - cf;
+      out.push({ mes: ms.slice(2), receita: rec, lucro, margem: rec > 0 ? (lucro / rec) * 100 : 0 });
+    }
+    return out;
+  }, [rows, month]);
+
+  // ============ CONCILIAÇÃO POR CONTA ============
+  const saldosPorConta = useMemo(() => {
+    const totals: Record<string, { entradas: number; saidas: number; saldo: number }> = {};
+    CONTAS.forEach((c) => { totals[c] = { entradas: 0, saidas: 0, saldo: saldosIniciais[c] || 0 }; });
+    rows.filter((r) => r.status === "realizado").forEach((r) => {
+      const t = totals[r.conta];
+      if (!t) return;
+      if (r.tipo === "entrada") { t.entradas += Number(r.valor); t.saldo += Number(r.valor); }
+      else { t.saidas += Number(r.valor); t.saldo -= Number(r.valor); }
+    });
+    return totals;
+  }, [rows, saldosIniciais]);
 
   // Contas a pagar/receber
   const contasPagar = rows.filter((r) => r.status === "previsto" && r.tipo === "saida").sort((a, b) => (a.data_vencimento || a.data).localeCompare(b.data_vencimento || b.data));
   const contasReceber = rows.filter((r) => r.status === "previsto" && r.tipo === "entrada").sort((a, b) => (a.data_vencimento || a.data).localeCompare(b.data_vencimento || b.data));
 
-  // Indicadores
   const queimaCaixa = saidasMes;
   const reservaNec = saidasMes * 3;
   const pontoEquilibrio = saidasMes;
@@ -139,8 +186,52 @@ function FluxoCaixa() {
     load();
   };
 
+  // ============ FILTROS ============
+  const [fSearch, setFSearch] = useState("");
+  const [fTipo, setFTipo] = useState<"todos" | "entrada" | "saida">("todos");
+  const [fCategoria, setFCategoria] = useState<string>("todas");
+  const [fStatus, setFStatus] = useState<"todos" | "previsto" | "realizado">("todos");
+  const [fConta, setFConta] = useState<string>("todas");
+  const [fDe, setFDe] = useState("");
+  const [fAte, setFAte] = useState("");
+
+  const lancamentosFiltrados = useMemo(() => {
+    return rows.filter((r) => {
+      if (!(r.data || "").startsWith(year)) return false;
+      if (fTipo !== "todos" && r.tipo !== fTipo) return false;
+      if (fStatus !== "todos" && r.status !== fStatus) return false;
+      if (fCategoria !== "todas" && r.categoria !== fCategoria) return false;
+      if (fConta !== "todas" && r.conta !== fConta) return false;
+      if (fDe && r.data < fDe) return false;
+      if (fAte && r.data > fAte) return false;
+      if (fSearch) {
+        const s = fSearch.toLowerCase();
+        const hay = `${r.descricao} ${r.categoria} ${r.subcategoria || ""} ${r.cliente_fornecedor || ""} ${r.observacoes || ""}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [rows, year, fSearch, fTipo, fCategoria, fStatus, fConta, fDe, fAte]);
+
+  const todasCategorias = useMemo(() => Array.from(new Set(rows.map((r) => r.categoria))).sort(), [rows]);
+
+  // ============ EXPORT ============
+  const exportCSV = (data: Lanc[], filename: string) => {
+    const headers = ["Data", "Tipo", "Categoria", "Subcategoria", "Descrição", "Cliente/Fornecedor", "Conta", "Forma Pagamento", "Status", "Vencimento", "Pagamento", "Valor"];
+    const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [headers.join(";")];
+    data.forEach((r) => {
+      lines.push([r.data, r.tipo, r.categoria, r.subcategoria, r.descricao, r.cliente_fornecedor, r.conta, r.forma_pagamento, r.status, r.data_vencimento, r.data_pagamento, Number(r.valor).toFixed(2).replace(".", ",")].map(escape).join(";"));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  };
+
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Fluxo de Caixa</h1>
@@ -168,7 +259,7 @@ function FluxoCaixa() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI label="Entradas do Mês" value={fmtBRL(entradasMes)} sub={`${varReceita >= 0 ? "+" : ""}${varReceita.toFixed(1)}% vs mês ant.`} Icon={TrendingUp} tone="bg-success/15 text-success" />
         <KPI label="Saídas do Mês" value={fmtBRL(saidasMes)} sub={`Mês anterior: ${fmtBRL(saidasPrev)}`} Icon={TrendingDown} tone="bg-destructive/15 text-destructive" />
         <KPI label="Resultado" value={fmtBRL(resultado)} sub={`Margem ${margem.toFixed(1)}%`} Icon={Wallet} tone={resultado >= 0 ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"} />
@@ -176,16 +267,50 @@ function FluxoCaixa() {
       </div>
 
       <Tabs defaultValue="lancamentos" className="space-y-4">
-        <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
           <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
-          <TabsTrigger value="diario">Fluxo Diário</TabsTrigger>
+          <TabsTrigger value="diario">Diário</TabsTrigger>
           <TabsTrigger value="projetado">Projetado</TabsTrigger>
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
           <TabsTrigger value="contas">Contas</TabsTrigger>
+          <TabsTrigger value="dre">DRE</TabsTrigger>
+          <TabsTrigger value="conciliacao">Conciliação</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="lancamentos">
+        <TabsContent value="lancamentos" className="space-y-3">
+          <Card className="p-3 flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[180px]"><Label className="text-xs">Buscar</Label><Input placeholder="Descrição, cliente..." value={fSearch} onChange={(e) => setFSearch(e.target.value)} /></div>
+            <div><Label className="text-xs">Tipo</Label>
+              <Select value={fTipo} onValueChange={(v: any) => setFTipo(v)}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="todos">Todos</SelectItem><SelectItem value="entrada">Entrada</SelectItem><SelectItem value="saida">Saída</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-xs">Categoria</Label>
+              <Select value={fCategoria} onValueChange={setFCategoria}>
+                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="todas">Todas</SelectItem>{todasCategorias.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-xs">Status</Label>
+              <Select value={fStatus} onValueChange={(v: any) => setFStatus(v)}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="todos">Todos</SelectItem><SelectItem value="realizado">Realizado</SelectItem><SelectItem value="previsto">Previsto</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-xs">Conta</Label>
+              <Select value={fConta} onValueChange={setFConta}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="todas">Todas</SelectItem>{CONTAS.map((c) => <SelectItem key={c} value={c}>{CONTA_LABEL[c]}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-xs">De</Label><Input type="date" value={fDe} onChange={(e) => setFDe(e.target.value)} className="w-40" /></div>
+            <div><Label className="text-xs">Até</Label><Input type="date" value={fAte} onChange={(e) => setFAte(e.target.value)} className="w-40" /></div>
+            <Button variant="outline" size="sm" onClick={() => { setFSearch(""); setFTipo("todos"); setFCategoria("todas"); setFStatus("todos"); setFConta("todas"); setFDe(""); setFAte(""); }}>Limpar</Button>
+            <Button variant="outline" size="sm" onClick={() => exportCSV(lancamentosFiltrados, `lancamentos-${year}.csv`)}><Download className="h-4 w-4 mr-1" /> Excel/CSV</Button>
+            <ImportCSV onImported={load} />
+          </Card>
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -199,9 +324,9 @@ function FluxoCaixa() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-                  ) : rows.filter(r => (r.data || "").startsWith(year)).length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum lançamento em {year}.</td></tr>
-                  ) : rows.filter(r => (r.data || "").startsWith(year)).map((r) => (
+                  ) : lancamentosFiltrados.length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum lançamento encontrado.</td></tr>
+                  ) : lancamentosFiltrados.map((r) => (
                     <tr key={r.id} className="border-t hover:bg-muted/30">
                       <td className="px-4 py-3">{fmtDate(r.data)}</td>
                       <td className="px-4 py-3">
@@ -221,6 +346,7 @@ function FluxoCaixa() {
                 </tbody>
               </table>
             </div>
+            <div className="px-4 py-2 text-xs text-muted-foreground border-t">{lancamentosFiltrados.length} registro(s)</div>
           </Card>
         </TabsContent>
 
@@ -240,24 +366,6 @@ function FluxoCaixa() {
                   <Line type="monotone" dataKey="saidas" name="Saídas" stroke={C[1]} strokeWidth={1.5} />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-            <div className="overflow-x-auto mt-4">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>{["Dia", "Saldo Inicial", "Entradas", "Saídas", "Saldo Final"].map((h) => <th key={h} className="text-left font-semibold px-4 py-2">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {fluxoDiario.filter((d) => d.entradas > 0 || d.saidas > 0).map((d) => (
-                    <tr key={d.dia} className="border-t">
-                      <td className="px-4 py-2">{d.dia}/{month.slice(5)}</td>
-                      <td className="px-4 py-2 tabular-nums">{fmtBRL(d.saldoInicial)}</td>
-                      <td className="px-4 py-2 tabular-nums text-success">{fmtBRL(d.entradas)}</td>
-                      <td className="px-4 py-2 tabular-nums text-destructive">{fmtBRL(d.saidas)}</td>
-                      <td className={`px-4 py-2 tabular-nums font-semibold ${d.saldoFinal < 0 ? "text-destructive" : ""}`}>{fmtBRL(d.saldoFinal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </Card>
         </TabsContent>
@@ -289,23 +397,6 @@ function FluxoCaixa() {
             <KPI label="Queima de Caixa" value={fmtBRL(queimaCaixa)} sub="Gasto total no mês" Icon={TrendingDown} tone="bg-destructive/15 text-destructive" />
             <KPI label="Reserva Necessária" value={fmtBRL(reservaNec)} sub="3 meses de operação" Icon={Wallet} tone="bg-chart-2/15 text-chart-2" />
           </div>
-          <Card className="p-5 mt-4">
-            <h3 className="font-semibold mb-3">Comparativo Mensal</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground text-xs">Mês atual ({month})</div>
-                <div>Entradas: <b className="text-success">{fmtBRL(entradasMes)}</b></div>
-                <div>Saídas: <b className="text-destructive">{fmtBRL(saidasMes)}</b></div>
-                <div>Resultado: <b>{fmtBRL(resultado)}</b></div>
-              </div>
-              <div>
-                <div className="text-muted-foreground text-xs">Mês anterior ({prevMonth})</div>
-                <div>Entradas: <b className="text-success">{fmtBRL(entradasPrev)}</b></div>
-                <div>Saídas: <b className="text-destructive">{fmtBRL(saidasPrev)}</b></div>
-                <div>Resultado: <b>{fmtBRL(resultadoPrev)}</b></div>
-              </div>
-            </div>
-          </Card>
         </TabsContent>
 
         <TabsContent value="categorias">
@@ -355,6 +446,120 @@ function FluxoCaixa() {
             </Card>
           </div>
         </TabsContent>
+
+        {/* ============ DRE ============ */}
+        <TabsContent value="dre" className="space-y-4">
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h2 className="font-semibold">DRE Gerencial — {month}</h2>
+                <p className="text-xs text-muted-foreground">Demonstração do Resultado do Exercício (regime de competência simplificado)</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4 mr-1" /> Imprimir / PDF</Button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+              <KPI label="Margem Bruta" value={`${dre.margemBruta.toFixed(1)}%`} sub="Após custos variáveis" Icon={TrendingUp} tone="bg-success/15 text-success" />
+              <KPI label="Margem Líquida" value={`${dre.margemLiquida.toFixed(1)}%`} sub="Lucro / Receita" Icon={Wallet} tone={dre.margemLiquida >= 0 ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"} />
+              <KPI label="Custo Variável" value={`${dre.percentVariavel.toFixed(1)}%`} sub={fmtBRL(dre.custoVariavel)} Icon={TrendingDown} tone="bg-warning/15 text-warning" />
+              <KPI label="Custo Fixo" value={`${dre.percentFixo.toFixed(1)}%`} sub={fmtBRL(dre.custosFixos)} Icon={TrendingDown} tone="bg-destructive/15 text-destructive" />
+              <KPI label="Ponto Equilíbrio" value={fmtBRL(dre.peReceita)} sub="Receita p/ lucro zero" Icon={Target} tone="bg-chart-2/15 text-chart-2" />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  <DreRow label="(=) Receita Bruta" value={dre.receitaBruta} bold />
+                  <DreRow label="(−) Custos Variáveis (Peças)" value={-dre.custoVariavel} pct={dre.percentVariavel} />
+                  <DreRow label="(=) Margem de Contribuição" value={dre.margemContribuicao} pct={dre.margemBruta} bold />
+                  <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-xs text-muted-foreground uppercase">Custos Fixos</td></tr>
+                  {Object.entries(dre.fixosPorCat).sort((a, b) => b[1] - a[1]).map(([cat, val]) => (
+                    <DreRow key={cat} label={`   ${cat}`} value={-val} muted />
+                  ))}
+                  <DreRow label="(−) Total Custos Fixos" value={-dre.custosFixos} pct={dre.percentFixo} />
+                  <DreRow label="(=) Lucro Líquido" value={dre.lucroLiquido} pct={dre.margemLiquida} bold highlight />
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-semibold mb-3">Evolução — Últimos 6 meses</h3>
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer>
+                <BarChart data={dreHistorico}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" fontSize={11} />
+                  <YAxis yAxisId="left" fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis yAxisId="right" orientation="right" fontSize={11} tickFormatter={(v) => `${v.toFixed(0)}%`} />
+                  <Tooltip formatter={(v: any, n: any) => n === "margem" ? `${Number(v).toFixed(1)}%` : fmtBRL(Number(v))} />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="receita" name="Receita" fill={C[0]} />
+                  <Bar yAxisId="left" dataKey="lucro" name="Lucro" fill={C[2]} />
+                  <Line yAxisId="right" type="monotone" dataKey="margem" name="Margem %" stroke={C[1]} strokeWidth={2} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ============ CONCILIAÇÃO ============ */}
+        <TabsContent value="conciliacao" className="space-y-4">
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h2 className="font-semibold">Conciliação Bancária</h2>
+                <p className="text-xs text-muted-foreground">Saldos por conta e transferências internas</p>
+              </div>
+              <TransferenciaDialog onSaved={load} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {CONTAS.map((c) => {
+                const t = saldosPorConta[c];
+                return (
+                  <Card key={c} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold capitalize">{CONTA_LABEL[c]}</div>
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-1">Saldo inicial</div>
+                    <Input type="number" value={saldosIniciais[c]} onChange={(e) => setSaldosIniciais({ ...saldosIniciais, [c]: Number(e.target.value) })} className="h-8 mb-2" />
+                    <div className="text-xs text-muted-foreground">Entradas: <span className="text-success">{fmtBRL(t.entradas)}</span></div>
+                    <div className="text-xs text-muted-foreground">Saídas: <span className="text-destructive">{fmtBRL(t.saidas)}</span></div>
+                    <div className={`text-2xl font-bold mt-2 ${t.saldo < 0 ? "text-destructive" : ""}`}>{fmtBRL(t.saldo)}</div>
+                    <div className="text-xs text-muted-foreground">Saldo atual</div>
+                  </Card>
+                );
+              })}
+            </div>
+          </Card>
+
+          {CONTAS.map((c) => {
+            const lancsConta = rows.filter((r) => r.conta === c && (r.data || "").startsWith(year)).slice(0, 50);
+            return (
+              <Card key={c} className="p-5">
+                <h3 className="font-semibold mb-3 capitalize">Extrato — {CONTA_LABEL[c]} ({lancsConta.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50"><tr>{["Data","Descrição","Categoria","Tipo","Valor","Status"].map((h) => <th key={h} className="text-left font-semibold px-3 py-2">{h}</th>)}</tr></thead>
+                    <tbody>
+                      {lancsConta.length === 0 ? (
+                        <tr><td colSpan={6} className="px-3 py-4 text-center text-muted-foreground">Sem movimentações</td></tr>
+                      ) : lancsConta.map((r) => (
+                        <tr key={r.id} className="border-t">
+                          <td className="px-3 py-2">{fmtDate(r.data)}</td>
+                          <td className="px-3 py-2 max-w-xs truncate">{r.descricao}</td>
+                          <td className="px-3 py-2">{r.categoria}</td>
+                          <td className="px-3 py-2 capitalize">{r.tipo}</td>
+                          <td className={`px-3 py-2 font-semibold tabular-nums ${r.tipo === "entrada" ? "text-success" : "text-destructive"}`}>{r.tipo === "entrada" ? "+" : "-"}{fmtBRL(r.valor)}</td>
+                          <td className="px-3 py-2"><Badge variant={r.status === "realizado" ? "secondary" : "outline"}>{r.status}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            );
+          })}
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -372,6 +577,16 @@ function KPI({ label, value, sub, Icon, tone }: { label: string; value: string; 
         <div className={`h-10 w-10 rounded-md flex items-center justify-center ${tone}`}><Icon className="h-5 w-5" /></div>
       </div>
     </Card>
+  );
+}
+
+function DreRow({ label, value, pct, bold, highlight, muted }: { label: string; value: number; pct?: number; bold?: boolean; highlight?: boolean; muted?: boolean }) {
+  return (
+    <tr className={`border-t ${highlight ? "bg-primary/5" : ""}`}>
+      <td className={`px-4 py-2 ${bold ? "font-semibold" : ""} ${muted ? "text-muted-foreground" : ""} whitespace-pre`}>{label}</td>
+      <td className={`px-4 py-2 text-right tabular-nums ${bold ? "font-semibold" : ""} ${value < 0 ? "text-destructive" : value > 0 ? "" : ""}`}>{fmtBRL(value)}</td>
+      <td className="px-4 py-2 text-right tabular-nums text-xs text-muted-foreground w-20">{pct !== undefined ? `${pct.toFixed(1)}%` : ""}</td>
+    </tr>
   );
 }
 
@@ -394,6 +609,102 @@ function ContasList({ rows }: { rows: Lanc[] }) {
         );
       })}
     </ul>
+  );
+}
+
+function ImportCSV({ onImported }: { onImported: () => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const handle = async (file: File) => {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) { toast.error("Arquivo vazio"); return; }
+    const sep = lines[0].includes(";") ? ";" : ",";
+    const header = lines[0].split(sep).map((h) => h.trim().toLowerCase().replace(/^"|"$/g, ""));
+    const idx = (k: string) => header.findIndex((h) => h.includes(k));
+    const iData = idx("data");
+    const iDesc = idx("descri") >= 0 ? idx("descri") : idx("histor");
+    const iValor = idx("valor");
+    const iTipo = idx("tipo");
+    if (iData < 0 || iDesc < 0 || iValor < 0) { toast.error("CSV precisa ter colunas: data, descrição/histórico, valor"); return; }
+    const items: any[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
+      const dRaw = cols[iData];
+      const valRaw = cols[iValor].replace(/\./g, "").replace(",", ".").replace(/[^\d.\-]/g, "");
+      const valor = Math.abs(Number(valRaw));
+      if (!dRaw || !valor) continue;
+      let data = dRaw;
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(dRaw)) {
+        const [d, m, y] = dRaw.split("/");
+        data = `${y}-${m}-${d}`;
+      }
+      const tipo = iTipo >= 0 ? (cols[iTipo].toLowerCase().includes("entrada") || cols[iTipo].toLowerCase().includes("credit") ? "entrada" : "saida") : (Number(valRaw) >= 0 ? "entrada" : "saida");
+      items.push({ data, tipo, categoria: tipo === "entrada" ? "Outras Receitas" : "Outros", descricao: cols[iDesc] || "Importado", valor, status: "realizado", conta: "banco" });
+    }
+    if (!items.length) { toast.error("Nenhuma linha válida"); return; }
+    const { error } = await supabase.from("lancamentos").insert(items);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${items.length} lançamento(s) importado(s)`);
+    onImported();
+  };
+  return (
+    <>
+      <input ref={ref} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])} />
+      <Button variant="outline" size="sm" onClick={() => ref.current?.click()}><Upload className="h-4 w-4 mr-1" /> Importar CSV</Button>
+    </>
+  );
+}
+
+function TransferenciaDialog({ onSaved }: { onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [origem, setOrigem] = useState<"caixa" | "banco" | "cartao">("caixa");
+  const [destino, setDestino] = useState<"caixa" | "banco" | "cartao">("banco");
+  const [valor, setValor] = useState(0);
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [desc, setDesc] = useState("");
+
+  const save = async () => {
+    if (origem === destino) { toast.error("Contas devem ser diferentes"); return; }
+    if (!valor) { toast.error("Informe o valor"); return; }
+    const descricao = desc || `Transferência ${CONTA_LABEL[origem]} → ${CONTA_LABEL[destino]}`;
+    const { error } = await supabase.from("lancamentos").insert([
+      { data, tipo: "saida", categoria: "Transferência", descricao, valor, status: "realizado", conta: origem },
+      { data, tipo: "entrada", categoria: "Transferência", descricao, valor, status: "realizado", conta: destino },
+    ]);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Transferência registrada");
+    setOpen(false); setValor(0); setDesc("");
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="outline" size="sm"><ArrowLeftRight className="h-4 w-4 mr-1" /> Nova Transferência</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Transferência entre Contas</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>De</Label>
+            <Select value={origem} onValueChange={(v: any) => setOrigem(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CONTAS.map((c) => <SelectItem key={c} value={c}>{CONTA_LABEL[c]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Para</Label>
+            <Select value={destino} onValueChange={(v: any) => setDestino(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CONTAS.map((c) => <SelectItem key={c} value={c}>{CONTA_LABEL[c]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Valor</Label><Input type="number" step="0.01" value={valor} onChange={(e) => setValor(Number(e.target.value))} /></div>
+          <div><Label>Data</Label><Input type="date" value={data} onChange={(e) => setData(e.target.value)} /></div>
+          <div className="col-span-2"><Label>Descrição (opcional)</Label><Input value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={save}>Transferir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
