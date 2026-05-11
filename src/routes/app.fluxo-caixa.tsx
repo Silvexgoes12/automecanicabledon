@@ -562,6 +562,10 @@ function FluxoCaixa() {
             );
           })}
         </TabsContent>
+
+        <TabsContent value="sheets">
+          <SheetsSyncTab onSynced={load} />
+        </TabsContent>
       </Tabs>
     </div>
   );
