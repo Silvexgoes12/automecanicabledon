@@ -14,6 +14,7 @@ import { fmtBRL, fmtDate } from "@/lib/format";
 import { Plus, Trash2, AlertTriangle, TrendingUp, TrendingDown, Wallet, Target, Upload, Download, FileText, ArrowLeftRight, Printer } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
+import { SheetsSyncTab } from "@/components/SheetsSyncTab";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({
   component: FluxoCaixa,
@@ -267,7 +268,7 @@ function FluxoCaixa() {
       </div>
 
       <Tabs defaultValue="lancamentos" className="space-y-4">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
+        <TabsList className="grid grid-cols-3 lg:grid-cols-9 w-full">
           <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
           <TabsTrigger value="diario">Diário</TabsTrigger>
           <TabsTrigger value="projetado">Projetado</TabsTrigger>
@@ -276,6 +277,7 @@ function FluxoCaixa() {
           <TabsTrigger value="contas">Contas</TabsTrigger>
           <TabsTrigger value="dre">DRE</TabsTrigger>
           <TabsTrigger value="conciliacao">Conciliação</TabsTrigger>
+          <TabsTrigger value="sheets">Sheets</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lancamentos" className="space-y-3">
