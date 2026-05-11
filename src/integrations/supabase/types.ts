@@ -338,7 +338,9 @@ export type Database = {
           os_id: string | null
           status: Database["public"]["Enums"]["lancamento_status"]
           subcategoria: string | null
+          sync_external_id: string | null
           tipo: Database["public"]["Enums"]["lancamento_tipo"]
+          updated_at: string
           valor: number
         }
         Insert: {
@@ -356,7 +358,9 @@ export type Database = {
           os_id?: string | null
           status?: Database["public"]["Enums"]["lancamento_status"]
           subcategoria?: string | null
+          sync_external_id?: string | null
           tipo: Database["public"]["Enums"]["lancamento_tipo"]
+          updated_at?: string
           valor: number
         }
         Update: {
@@ -374,7 +378,9 @@ export type Database = {
           os_id?: string | null
           status?: Database["public"]["Enums"]["lancamento_status"]
           subcategoria?: string | null
+          sync_external_id?: string | null
           tipo?: Database["public"]["Enums"]["lancamento_tipo"]
+          updated_at?: string
           valor?: number
         }
         Relationships: []
@@ -649,6 +655,39 @@ export type Database = {
           nome?: string
           preco_base?: number
           tempo_estimado_horas?: number | null
+        }
+        Relationships: []
+      }
+      sheets_config: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          last_sync_summary: Json | null
+          sheet_name: string
+          spreadsheet_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_sync_summary?: Json | null
+          sheet_name?: string
+          spreadsheet_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_sync_summary?: Json | null
+          sheet_name?: string
+          spreadsheet_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
