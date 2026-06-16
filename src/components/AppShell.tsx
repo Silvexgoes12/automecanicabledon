@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 
@@ -15,6 +15,7 @@ const nav = [
   { to: "/app/pecas", label: "Peças & Estoque", icon: Package },
   { to: "/app/crm", label: "CRM", icon: TrendingUp },
   { to: "/app/equipe", label: "Equipe", icon: UserCircle },
+  { to: "/app/suporte", label: "Suporte", icon: MessageSquare },
 ];
 
 export function AppShell() {
