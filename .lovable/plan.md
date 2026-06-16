@@ -1,85 +1,62 @@
+## Aba "Suporte" dentro do app
 
-# Sincronização Google Sheets ↔ Fluxo de Caixa
+Nova seção no menu lateral com duas sub-abas: **Feedback** (envio único, sem resposta) e **Dúvidas** (ticket com troca de mensagens). Cada cliente vê apenas os seus próprios envios; o admin vê todos e é o único que pode responder.
 
-## Observação importante antes de começar
+### Banco de dados
 
-Você pediu que "a base de dados seja o Sheets". Recomendo **não** substituir o banco do app pelo Sheets, e sim tratar a planilha como **espelho editável** dos Lançamentos. Motivos:
+Três tabelas novas em `public`:
 
-- O app já tem várias tabelas relacionadas (clientes, veículos, ordens, peças, despesas, equipe, CRM). Mover tudo para Sheets quebraria essas relações e a performance.
-- Sheets tem limites (10M células, ~latência alta em leituras) e não tem RLS, controle transacional ou índices.
-- O DRE, KPIs e Conciliação dependem de queries SQL rápidas que ficariam inviáveis lendo a planilha a cada abertura de tela.
+1. `support_tickets` — `id`, `user_id`, `tipo` ('duvida' | 'feedback'), `assunto`, `status` ('aberto' | 'respondido' | 'resolvido'), `created_at`, `updated_at`.
+2. `support_messages` — `id`, `ticket_id`, `user_id` (autor), `is_admin` (bool), `mensagem`, `created_at`.
+3. `app_admins` — `email` (PK). Pré-populada com `financeiro@plinenergia.com.br`. Função `is_admin(uid)` SECURITY DEFINER cruza `auth.users.email` com essa tabela.
 
-**Modelo proposto:** Supabase continua sendo a base. O Sheets vira uma "interface de planilha" para a aba **Lançamentos** (a que você mais quer editar em massa). Você edita onde for mais cômodo e clica em **Sincronizar** para alinhar os dois lados.
+RLS:
 
-Se quiser estender depois para Despesas ou Clientes, é só repetir o padrão.
+- Cliente: SELECT/INSERT só nos próprios tickets/mensagens; não pode marcar `is_admin=true`.
+- Admin (via `is_admin(auth.uid())`): SELECT/INSERT/UPDATE em tudo.
+- Feedback: trava INSERT de mensagens adicionais (somente a primeira mensagem do autor).
 
----
+GRANTs para `authenticated` e `service_role` em todas as três.
 
-## O que será entregue
+### Backend (server functions)
 
-1. **Conexão Google Sheets** via Lovable Cloud (OAuth uma vez, só sua conta).
-2. **Nova aba "Sheets Sync"** dentro de Fluxo de Caixa, com:
-   - Campo para colar a URL da planilha (salvo por usuário).
-   - Botão **"Puxar do Sheets → App"**.
-   - Botão **"Enviar do App → Sheets"**.
-   - Botão **"Sincronizar (bidirecional)"**.
-   - Status da última sincronização (data, quantidade criada/atualizada, conflitos).
-3. **Template inicial**: ao conectar pela primeira vez, o app pode criar a planilha já com o cabeçalho correto.
+`src/lib/support.functions.ts` com `requireSupabaseAuth`:
 
-## Como a sincronização decide o que fazer
+- `listTickets` — admin recebe todos com nome/email do autor; cliente recebe os próprios.
+- `createTicket({ tipo, assunto, mensagem })` — cria ticket + 1ª mensagem.
+- `addMessage({ ticketId, mensagem })` — bloqueia em feedback; atualiza status (admin → 'respondido', cliente → 'aberto').
+- `setStatus({ ticketId, status })` — só admin.
 
-Cada linha do Sheets terá uma coluna oculta `sync_id` (= id do lançamento no Supabase) e `updated_at`. O motor compara:
+Cada mutação enfileira um e-mail de notificação (sem bloquear a resposta se falhar).
 
-- Linha no Sheets sem `sync_id` → cria novo lançamento no app.
-- Lançamento no app sem linha correspondente → adiciona linha no Sheets.
-- Mesma `sync_id` dos dois lados → vence o `updated_at` mais recente (last-write-wins).
-- Linha apagada no Sheets (com `sync_id` que existe no app) → marca o lançamento como excluído (com confirmação na UI mostrando quantos serão removidos).
+### E-mail (Resend)
 
-Conflitos não-triviais (mesmo registro editado dos dois lados no mesmo minuto) entram numa lista que aparece após o clique, e você escolhe qual versão manter.
+Conector Resend (vou pedir aprovação para vincular). Helper `src/lib/email.server.ts` envia via gateway Lovable:
 
-## Formato da planilha (aba `Lancamentos`)
+- Novo ticket/feedback → e-mail para `financeiro@plinenergia.com.br` com link `/app/suporte?ticket=<id>`.
+- Resposta do admin → e-mail para o autor do ticket.
+- Remetente: `onboarding@resend.dev` (placeholder até verificar domínio próprio no Resend).
 
-| Coluna       | Tipo     | Obrigatória |
-|--------------|----------|-------------|
-| sync_id      | texto    | gerado      |
-| data         | data     | sim         |
-| tipo         | entrada/saida | sim    |
-| categoria    | texto    | sim         |
-| descricao    | texto    | sim         |
-| valor        | número   | sim         |
-| conta        | caixa/banco/cartao | sim |
-| status       | previsto/realizado | sim |
-| data_pagamento | data   | não         |
-| updated_at   | data/hora| gerado      |
+### UI
 
-Validação de tipos é feita antes de gravar no Supabase — linhas inválidas aparecem num relatório e não bloqueiam o restante.
+`src/routes/app.suporte.tsx` + entrada no `AppShell`:
 
----
+- Tabs internas: **Dúvidas** | **Feedback** | (admin) **Todos**.
+- Lista de tickets (assunto, status badge, data, autor se admin).
+- Botão "Novo" abre dialog (tipo, assunto, mensagem).
+- Drawer/painel do ticket: thread de mensagens, composer (admin sempre, cliente só em dúvidas não resolvidas), botão "Marcar como resolvido" (admin).
+- Estado vazio amigável e contagem de não-lidos por status.
 
-## Detalhes técnicos
+### Sequência de execução
 
-- **Conector**: `google_sheets` via gateway do Lovable Cloud (`standard_connectors--connect`). Sua conta autoriza uma vez; nenhum usuário final precisa fazer OAuth.
-- **Server function** `syncSheets` em `src/lib/sheets.functions.ts` com três modos: `pull`, `push`, `both`. Protegida por `requireSupabaseAuth`.
-- Chama `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/{id}/values/Lancamentos!A:J` com `GET` para puxar e `PUT`/`append` para gravar.
-- **Tabela nova** `sheets_config` (id, user_id, spreadsheet_id, last_sync_at) para guardar a URL conectada.
-- Coluna nova `sync_external_id` em `lancamentos` para correlação (índice único).
-- **UI**: nova aba dentro de `src/routes/app.fluxo-caixa.tsx` reaproveitando o padrão de tabs já existente (DRE, Conciliação, Lançamentos…).
-- Botão de sincronização desabilita durante a operação e mostra toast com o resultado.
+1. Migration (tabelas + `is_admin` + RLS + seed admin).
+2. Vincular conector Resend (requer aprovação sua).
+3. `support.functions.ts` + helper de e-mail.
+4. Rota `app.suporte.tsx` + componentes + item no menu.
+5. Teste manual: criar dúvida com conta cliente, responder logado como [emanuelbritomanu12@gmail.com](mailto:emanuelbritomanu12@gmail.com) e `financeiro@plinenergia.com.br`, conferir e-mails.
 
-## Limitações honestas
+### Observações
 
-- **Manual only** nesta primeira versão (você pediu botão manual). Webhook em tempo real do Sheets exige Apps Script extra — dá para adicionar depois.
-- Funciona **só para Lançamentos** nesta entrega. Despesas/OS/Clientes ficam fora até validarmos o fluxo.
-- Last-write-wins é simples. Se você editar a mesma linha nos dois lados sem sincronizar entre eles, o lado mais recente sobrescreve.
-
----
-
-## Resumo das fases
-
-1. Conectar Google Sheets via Lovable Cloud.
-2. Migração: criar `sheets_config` e adicionar `sync_external_id` em `lancamentos`.
-3. Implementar server function `syncSheets` (pull / push / both) com mapeamento + validação.
-4. Adicionar aba **"Sheets"** em Fluxo de Caixa com URL, botões e relatório da última execução.
-5. Criar template da planilha automaticamente na primeira conexão.
-
-Pode confirmar para eu implementar?
+- Apenas o e-mail listado em `app_admins` consegue responder; para adicionar outros admins basta inserir uma linha (sem mexer em código).
+- Sem anexos nesta fase.
+- Notificações apenas por e-mail; sem badge em tempo real (pode entrar depois).
