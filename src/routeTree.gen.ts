@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppVeiculosRouteImport } from './routes/app.veiculos'
+import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppPecasRouteImport } from './routes/app.pecas'
 import { Route as AppOrdensRouteImport } from './routes/app.ordens'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
@@ -45,6 +46,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppVeiculosRoute = AppVeiculosRouteImport.update({
   id: '/veiculos',
   path: '/veiculos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuporteRoute = AppSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPecasRoute = AppPecasRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/pecas': typeof AppPecasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app/': typeof AppIndexRoute
 }
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/pecas': typeof AppPecasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app': typeof AppIndexRoute
 }
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/ordens': typeof AppOrdensRoute
   '/app/pecas': typeof AppPecasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/veiculos': typeof AppVeiculosRoute
   '/app/': typeof AppIndexRoute
 }
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/ordens'
     | '/app/pecas'
+    | '/app/suporte'
     | '/app/veiculos'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/ordens'
     | '/app/pecas'
+    | '/app/suporte'
     | '/app/veiculos'
     | '/app'
   id:
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/ordens'
     | '/app/pecas'
+    | '/app/suporte'
     | '/app/veiculos'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -210,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: '/veiculos'
       fullPath: '/app/veiculos'
       preLoaderRoute: typeof AppVeiculosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/suporte': {
+      id: '/app/suporte'
+      path: '/suporte'
+      fullPath: '/app/suporte'
+      preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/pecas': {
@@ -272,6 +291,7 @@ interface AppRouteChildren {
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
   AppOrdensRoute: typeof AppOrdensRoute
   AppPecasRoute: typeof AppPecasRoute
+  AppSuporteRoute: typeof AppSuporteRoute
   AppVeiculosRoute: typeof AppVeiculosRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -284,6 +304,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
   AppOrdensRoute: AppOrdensRoute,
   AppPecasRoute: AppPecasRoute,
+  AppSuporteRoute: AppSuporteRoute,
   AppVeiculosRoute: AppVeiculosRoute,
   AppIndexRoute: AppIndexRoute,
 }
