@@ -1,59 +1,27 @@
 
-## Objetivo
-Adicionar uma seção de **Perguntas Frequentes (FAQs)** na página `/app/suporte` para que os clientes encontrem respostas imediatas para dúvidas comuns antes de abrir um ticket — reduzindo volume de suporte e acelerando autoatendimento.
+## Diagnóstico
+Os dados continuam intactos no banco (100 clientes, 750 OS, 1.658 lançamentos, etc.). O dashboard mostra "zerado" porque a última rodada de segurança trocou as policies de RLS de **todas as tabelas de negócio** para `is_app_admin(auth.uid())`. Apenas `financeiro@plinenergia.com.br` é admin — o usuário logado agora (`emanuelbritomanu12@gmail.com`) é bloqueado e recebe 0 em tudo.
 
-## Onde
-- Arquivo: `src/routes/app.suporte.tsx` (única alteração de UI).
-- Novo arquivo: `src/lib/support-faqs.ts` (conteúdo estático das FAQs, fácil de editar).
+## Correção (uma migração)
+Reverter as policies das tabelas de negócio para **"qualquer usuário autenticado"**, mantendo Suporte e admins como estão.
 
-## Estrutura da UI
-Na tela inicial do Suporte (antes das abas "Dúvidas / Feedback"):
+Tabelas afetadas (SELECT/INSERT/UPDATE/DELETE → `TO authenticated USING (true) WITH CHECK (true)`):
+- `clientes`, `veiculos`, `ordens_servico`, `os_itens`
+- `pecas`, `servicos_catalogo`, `fornecedores`, `funcionarios`
+- `despesas`, `lancamentos`, `pagamentos`
+- `crm_leads`, `crm_interacoes`
 
-```
-┌─────────────────────────────────────────────┐
-│ Suporte                          [+ Novo]   │
-├─────────────────────────────────────────────┤
-│ 📚 Perguntas Frequentes                     │
-│ Antes de abrir um ticket, veja se sua       │
-│ dúvida já está respondida abaixo.           │
-│                                             │
-│ [🔎 Buscar nas FAQs...]                     │
-│                                             │
-│ ▸ Como cadastrar um cliente?                │
-│ ▸ Como criar uma Ordem de Serviço?          │
-│ ▸ Como registrar peças e estoque?           │
-│ ▸ ... (Accordion expansível)                │
-│                                             │
-│ Não achou? [Abrir um ticket]                │
-├─────────────────────────────────────────────┤
-│ [Tabs] Dúvidas | Feedback                   │
-│ ... lista de tickets ...                    │
-└─────────────────────────────────────────────┘
-```
+Para cada tabela: `DROP POLICY` das 4 policies `admin_*` e recriar como `auth_all_select/insert/update/delete` com predicado `true` para `authenticated`. RLS continua habilitado.
 
-Componente: `<Accordion>` do shadcn (`src/components/ui/accordion.tsx` já existe) + `<Input>` para filtro client-side por título/conteúdo.
+## O que NÃO muda
+- `app_admins`: continua restrito ao admin (somente admin lê/edita).
+- `support_tickets` / `support_messages`: continuam com o modelo cliente-vê-só-os-próprios e admin-vê-tudo / só admin responde.
+- `sheets_config`: continua por-usuário.
+- Função `is_app_admin` permanece (Suporte ainda usa).
+- Nenhuma alteração de código de UI — assim que a policy mudar, o dashboard volta a mostrar os 100 clientes, 750 OS, faturamento, despesas, gráficos, etc.
 
-## Conteúdo das FAQs
-Categorizadas por módulo do app, baseadas no que existe no projeto (rotas: Clientes, Veículos, Ordens, Peças, CRM, Despesas, Fluxo de Caixa, Equipe) e em boas práticas de gestão de oficina mecânica. Estimativa: ~12 perguntas.
+## Memória de segurança
+Atualizar `security memory` para refletir o novo modelo: app é single-tenant da oficina, qualquer usuário autenticado acessa os dados operacionais; apenas Suporte (responder) e `app_admins` (lista) são admin-only.
 
-Categorias e exemplos:
-- **Primeiros passos**: como fazer login, esqueci a senha, navegação geral.
-- **Clientes & Veículos**: cadastrar cliente, vincular veículo, editar dados.
-- **Ordens de Serviço**: criar OS, adicionar itens (peças/serviços), mudar status, imprimir.
-- **Peças & Estoque**: cadastro de peças, controle de entrada/saída, baixa via OS.
-- **Financeiro**: lançar despesa, registrar pagamento, fluxo de caixa.
-- **CRM**: cadastrar lead, registrar interação.
-- **Conta & Sincronização**: integração com Google Sheets, atualização de dados.
-
-Cada FAQ terá: `id`, `categoria`, `pergunta`, `resposta` (texto simples com passos).
-
-## Comportamento
-- Busca client-side: filtra perguntas/respostas por substring (case-insensitive).
-- Accordion: expande uma de cada vez (`type="single" collapsible`).
-- CTA "Não encontrei minha resposta" abre o diálogo "Novo ticket" já existente.
-- Sem chamadas a server functions — conteúdo 100% estático.
-
-## Fora do escopo
-- Não altera banco de dados, RLS, server functions ou notificações por e-mail.
-- Não cria CMS/editor de FAQs (lista é editada via código por enquanto).
-- Não toca em outras páginas do app.
+## Aviso de segurança aceito
+Esse modelo significa que qualquer e-mail que crie conta no app passa a ver todos os dados. Recomendação opcional (não incluída nesta correção, posso fazer depois se quiser): desativar self-signup no Lovable Cloud, deixando criação de usuários apenas por convite.
