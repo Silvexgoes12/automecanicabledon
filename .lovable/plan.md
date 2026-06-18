@@ -1,62 +1,59 @@
-## Aba "Suporte" dentro do app
 
-Nova seção no menu lateral com duas sub-abas: **Feedback** (envio único, sem resposta) e **Dúvidas** (ticket com troca de mensagens). Cada cliente vê apenas os seus próprios envios; o admin vê todos e é o único que pode responder.
+## Objetivo
+Adicionar uma seção de **Perguntas Frequentes (FAQs)** na página `/app/suporte` para que os clientes encontrem respostas imediatas para dúvidas comuns antes de abrir um ticket — reduzindo volume de suporte e acelerando autoatendimento.
 
-### Banco de dados
+## Onde
+- Arquivo: `src/routes/app.suporte.tsx` (única alteração de UI).
+- Novo arquivo: `src/lib/support-faqs.ts` (conteúdo estático das FAQs, fácil de editar).
 
-Três tabelas novas em `public`:
+## Estrutura da UI
+Na tela inicial do Suporte (antes das abas "Dúvidas / Feedback"):
 
-1. `support_tickets` — `id`, `user_id`, `tipo` ('duvida' | 'feedback'), `assunto`, `status` ('aberto' | 'respondido' | 'resolvido'), `created_at`, `updated_at`.
-2. `support_messages` — `id`, `ticket_id`, `user_id` (autor), `is_admin` (bool), `mensagem`, `created_at`.
-3. `app_admins` — `email` (PK). Pré-populada com `financeiro@plinenergia.com.br`. Função `is_admin(uid)` SECURITY DEFINER cruza `auth.users.email` com essa tabela.
+```
+┌─────────────────────────────────────────────┐
+│ Suporte                          [+ Novo]   │
+├─────────────────────────────────────────────┤
+│ 📚 Perguntas Frequentes                     │
+│ Antes de abrir um ticket, veja se sua       │
+│ dúvida já está respondida abaixo.           │
+│                                             │
+│ [🔎 Buscar nas FAQs...]                     │
+│                                             │
+│ ▸ Como cadastrar um cliente?                │
+│ ▸ Como criar uma Ordem de Serviço?          │
+│ ▸ Como registrar peças e estoque?           │
+│ ▸ ... (Accordion expansível)                │
+│                                             │
+│ Não achou? [Abrir um ticket]                │
+├─────────────────────────────────────────────┤
+│ [Tabs] Dúvidas | Feedback                   │
+│ ... lista de tickets ...                    │
+└─────────────────────────────────────────────┘
+```
 
-RLS:
+Componente: `<Accordion>` do shadcn (`src/components/ui/accordion.tsx` já existe) + `<Input>` para filtro client-side por título/conteúdo.
 
-- Cliente: SELECT/INSERT só nos próprios tickets/mensagens; não pode marcar `is_admin=true`.
-- Admin (via `is_admin(auth.uid())`): SELECT/INSERT/UPDATE em tudo.
-- Feedback: trava INSERT de mensagens adicionais (somente a primeira mensagem do autor).
+## Conteúdo das FAQs
+Categorizadas por módulo do app, baseadas no que existe no projeto (rotas: Clientes, Veículos, Ordens, Peças, CRM, Despesas, Fluxo de Caixa, Equipe) e em boas práticas de gestão de oficina mecânica. Estimativa: ~12 perguntas.
 
-GRANTs para `authenticated` e `service_role` em todas as três.
+Categorias e exemplos:
+- **Primeiros passos**: como fazer login, esqueci a senha, navegação geral.
+- **Clientes & Veículos**: cadastrar cliente, vincular veículo, editar dados.
+- **Ordens de Serviço**: criar OS, adicionar itens (peças/serviços), mudar status, imprimir.
+- **Peças & Estoque**: cadastro de peças, controle de entrada/saída, baixa via OS.
+- **Financeiro**: lançar despesa, registrar pagamento, fluxo de caixa.
+- **CRM**: cadastrar lead, registrar interação.
+- **Conta & Sincronização**: integração com Google Sheets, atualização de dados.
 
-### Backend (server functions)
+Cada FAQ terá: `id`, `categoria`, `pergunta`, `resposta` (texto simples com passos).
 
-`src/lib/support.functions.ts` com `requireSupabaseAuth`:
+## Comportamento
+- Busca client-side: filtra perguntas/respostas por substring (case-insensitive).
+- Accordion: expande uma de cada vez (`type="single" collapsible`).
+- CTA "Não encontrei minha resposta" abre o diálogo "Novo ticket" já existente.
+- Sem chamadas a server functions — conteúdo 100% estático.
 
-- `listTickets` — admin recebe todos com nome/email do autor; cliente recebe os próprios.
-- `createTicket({ tipo, assunto, mensagem })` — cria ticket + 1ª mensagem.
-- `addMessage({ ticketId, mensagem })` — bloqueia em feedback; atualiza status (admin → 'respondido', cliente → 'aberto').
-- `setStatus({ ticketId, status })` — só admin.
-
-Cada mutação enfileira um e-mail de notificação (sem bloquear a resposta se falhar).
-
-### E-mail (Resend)
-
-Conector Resend (vou pedir aprovação para vincular). Helper `src/lib/email.server.ts` envia via gateway Lovable:
-
-- Novo ticket/feedback → e-mail para `financeiro@plinenergia.com.br` com link `/app/suporte?ticket=<id>`.
-- Resposta do admin → e-mail para o autor do ticket.
-- Remetente: `onboarding@resend.dev` (placeholder até verificar domínio próprio no Resend).
-
-### UI
-
-`src/routes/app.suporte.tsx` + entrada no `AppShell`:
-
-- Tabs internas: **Dúvidas** | **Feedback** | (admin) **Todos**.
-- Lista de tickets (assunto, status badge, data, autor se admin).
-- Botão "Novo" abre dialog (tipo, assunto, mensagem).
-- Drawer/painel do ticket: thread de mensagens, composer (admin sempre, cliente só em dúvidas não resolvidas), botão "Marcar como resolvido" (admin).
-- Estado vazio amigável e contagem de não-lidos por status.
-
-### Sequência de execução
-
-1. Migration (tabelas + `is_admin` + RLS + seed admin).
-2. Vincular conector Resend (requer aprovação sua).
-3. `support.functions.ts` + helper de e-mail.
-4. Rota `app.suporte.tsx` + componentes + item no menu.
-5. Teste manual: criar dúvida com conta cliente, responder logado como [emanuelbritomanu12@gmail.com](mailto:emanuelbritomanu12@gmail.com) e `financeiro@plinenergia.com.br`, conferir e-mails.
-
-### Observações
-
-- Apenas o e-mail listado em `app_admins` consegue responder; para adicionar outros admins basta inserir uma linha (sem mexer em código).
-- Sem anexos nesta fase.
-- Notificações apenas por e-mail; sem badge em tempo real (pode entrar depois).
+## Fora do escopo
+- Não altera banco de dados, RLS, server functions ou notificações por e-mail.
+- Não cria CMS/editor de FAQs (lista é editada via código por enquanto).
+- Não toca em outras páginas do app.
