@@ -208,6 +208,8 @@ function SuportePage() {
         <NewTicketDialog onCreated={reload} createFn={createFn} />
       </div>
 
+      <FaqSection />
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList>
           <TabsTrigger value="duvida">Dúvidas ({tickets.filter(t => t.tipo === "duvida").length})</TabsTrigger>
