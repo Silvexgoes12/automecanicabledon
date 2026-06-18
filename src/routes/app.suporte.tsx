@@ -11,7 +11,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
-import { MessageSquare, Send, Plus, ArrowLeft, CheckCircle2, Shield } from "lucide-react";
+import { MessageSquare, Send, Plus, ArrowLeft, CheckCircle2, Shield, HelpCircle, Search } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { FAQS, FAQ_CATEGORIES } from "@/lib/support-faqs";
 import {
   listTickets,
   getTicketMessages,
