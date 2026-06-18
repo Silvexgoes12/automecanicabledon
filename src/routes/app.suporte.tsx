@@ -314,3 +314,85 @@ function NewTicketDialog({ onCreated, createFn }: { onCreated: () => void; creat
     </Dialog>
   );
 }
+
+function FaqSection() {
+  const [query, setQuery] = useState("");
+  const [cat, setCat] = useState<string>("Todas");
+
+  const q = query.trim().toLowerCase();
+  const filtered = FAQS.filter((f) => {
+    const matchCat = cat === "Todas" || f.categoria === cat;
+    if (!q) return matchCat;
+    return (
+      matchCat &&
+      (f.pergunta.toLowerCase().includes(q) ||
+        f.resposta.toLowerCase().includes(q) ||
+        f.categoria.toLowerCase().includes(q))
+    );
+  });
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <HelpCircle className="h-5 w-5 text-primary mt-1 shrink-0" />
+        <div className="flex-1">
+          <h2 className="font-semibold">Perguntas frequentes</h2>
+          <p className="text-sm text-muted-foreground">
+            Antes de abrir um ticket, veja se sua dúvida já está respondida abaixo.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar nas FAQs..."
+            className="pl-9"
+          />
+        </div>
+        <Select value={cat} onValueChange={setCat}>
+          <SelectTrigger className="sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Todas">Todas as categorias</SelectItem>
+            {FAQ_CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-sm text-muted-foreground text-center py-6">
+          Nenhuma FAQ encontrada. Abra um ticket acima para falar com o suporte.
+        </div>
+      ) : (
+        <Accordion type="single" collapsible className="w-full">
+          {filtered.map((f) => (
+            <AccordionItem key={f.id} value={f.id}>
+              <AccordionTrigger>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                    {f.categoria}
+                  </span>
+                  <span>{f.pergunta}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
+                  {f.resposta}
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+    </Card>
+  );
+}
