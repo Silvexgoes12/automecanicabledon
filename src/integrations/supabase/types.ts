@@ -771,6 +771,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_approvals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          email: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          email?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          email?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       veiculos: {
         Row: {
           ano: number | null
@@ -827,6 +860,7 @@ export type Database = {
     }
     Functions: {
       is_app_admin: { Args: { _uid: string }; Returns: boolean }
+      is_user_approved: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
       categoria_despesa:
