@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft, MessageSquare, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 
@@ -18,10 +18,15 @@ const nav = [
   { to: "/app/suporte", label: "Suporte", icon: MessageSquare },
 ];
 
+const adminNav = [
+  { to: "/app/aprovacoes", label: "Aprovações", icon: ShieldCheck },
+];
+
 export function AppShell() {
   const location = useLocation();
   const nav2 = useNavigate();
   const [email, setEmail] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const saved = localStorage.getItem("sidebar_collapsed");
@@ -30,15 +35,19 @@ export function AppShell() {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) nav2({ to: "/auth" });
-      else setEmail(data.user.email || "");
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { nav2({ to: "/auth" }); return; }
+      setEmail(data.user.email || "");
+      const { data: adm } = await supabase.rpc("is_app_admin", { _uid: data.user.id });
+      setIsAdmin(Boolean(adm));
     });
   }, [nav2]);
 
   useEffect(() => {
     localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
+
+  const items = isAdmin ? [...nav, ...adminNav] : nav;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -72,8 +81,8 @@ export function AppShell() {
           )}
         </div>
         <nav className="flex-1 p-2 space-y-1">
-          {nav.map((n) => {
-            const active = n.exact ? location.pathname === n.to : location.pathname.startsWith(n.to);
+          {items.map((n) => {
+            const active = (n as any).exact ? location.pathname === n.to : location.pathname.startsWith(n.to);
             const Icon = n.icon;
             return (
               <Link

@@ -20,11 +20,15 @@ export const listTickets = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase } = context;
     const admin = await isAdmin(supabase, context.userId);
-    const { data: tickets, error } = await supabase
+    let query = supabase
       .from("support_tickets")
       .select("id, user_id, tipo, assunto, status, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(500);
+    // Defense in depth: even though RLS scopes to owner-or-admin, also filter
+    // in the server fn so non-admins never get other users' tickets.
+    if (!admin) query = query.eq("user_id", context.userId);
+    const { data: tickets, error } = await query;
     if (error) throw new Error(error.message);
 
     let authors: Record<string, string> = {};

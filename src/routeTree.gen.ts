@@ -22,6 +22,7 @@ import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppDespesasRouteImport } from './routes/app.despesas'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppAprovacoesRouteImport } from './routes/app.aprovacoes'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -88,11 +89,17 @@ const AppClientesRoute = AppClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAprovacoesRoute = AppAprovacoesRouteImport.update({
+  id: '/aprovacoes',
+  path: '/aprovacoes',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/aprovacoes': typeof AppAprovacoesRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/crm': typeof AppCrmRoute
   '/app/despesas': typeof AppDespesasRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/aprovacoes': typeof AppAprovacoesRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/crm': typeof AppCrmRoute
   '/app/despesas': typeof AppDespesasRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/aprovacoes': typeof AppAprovacoesRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/crm': typeof AppCrmRoute
   '/app/despesas': typeof AppDespesasRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/aprovacoes'
     | '/app/clientes'
     | '/app/crm'
     | '/app/despesas'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/app/aprovacoes'
     | '/app/clientes'
     | '/app/crm'
     | '/app/despesas'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/aprovacoes'
     | '/app/clientes'
     | '/app/crm'
     | '/app/despesas'
@@ -280,10 +292,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/aprovacoes': {
+      id: '/app/aprovacoes'
+      path: '/aprovacoes'
+      fullPath: '/app/aprovacoes'
+      preLoaderRoute: typeof AppAprovacoesRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAprovacoesRoute: typeof AppAprovacoesRoute
   AppClientesRoute: typeof AppClientesRoute
   AppCrmRoute: typeof AppCrmRoute
   AppDespesasRoute: typeof AppDespesasRoute
@@ -297,6 +317,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAprovacoesRoute: AppAprovacoesRoute,
   AppClientesRoute: AppClientesRoute,
   AppCrmRoute: AppCrmRoute,
   AppDespesasRoute: AppDespesasRoute,
