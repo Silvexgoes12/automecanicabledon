@@ -74,7 +74,7 @@ function SuportePage() {
   const [authors, setAuthors] = useState<Record<string, string>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"duvida" | "feedback">("duvida");
+  const [tab, setTab] = useState<"duvida" | "feedback" | "resolvido">("duvida");
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
@@ -142,7 +142,9 @@ function SuportePage() {
     return { abertos, respondidos, resolvidos, total: tickets.length };
   }, [tickets]);
 
-  const filtered = tickets.filter((t) => t.tipo === tab);
+  const filtered = tickets.filter((t) =>
+    tab === "resolvido" ? t.status === "resolvido" : t.tipo === tab && t.status !== "resolvido"
+  );
 
   // ===================== TICKET DETAIL =====================
   if (selected) {
@@ -308,12 +310,15 @@ function SuportePage() {
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-              <TabsList className="w-full grid grid-cols-2">
+              <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="duvida">
-                  Dúvidas ({tickets.filter(t => t.tipo === "duvida").length})
+                  Dúvidas ({tickets.filter(t => t.tipo === "duvida" && t.status !== "resolvido").length})
                 </TabsTrigger>
                 <TabsTrigger value="feedback">
-                  Feedback ({tickets.filter(t => t.tipo === "feedback").length})
+                  Feedback ({tickets.filter(t => t.tipo === "feedback" && t.status !== "resolvido").length})
+                </TabsTrigger>
+                <TabsTrigger value="resolvido">
+                  Resolvidos ({tickets.filter(t => t.status === "resolvido").length})
                 </TabsTrigger>
               </TabsList>
 
@@ -327,7 +332,7 @@ function SuportePage() {
                 ) : filtered.length === 0 ? (
                   <div className="text-center py-8 text-sm text-muted-foreground">
                     <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    Nenhum {tab === "duvida" ? "ticket" : "feedback"} ainda.
+                    Nenhum {tab === "duvida" ? "ticket" : tab === "feedback" ? "feedback" : "ticket resolvido"} ainda.
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-[480px] overflow-y-auto -mx-1 px-1">
