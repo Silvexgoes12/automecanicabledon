@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft, MessageSquare, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, Car, Wrench, Receipt, TrendingUp, Package, UserCircle, LogOut, Cog, Wallet, Menu, ChevronLeft, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 
@@ -16,10 +16,6 @@ const nav = [
   { to: "/app/crm", label: "CRM", icon: TrendingUp },
   { to: "/app/equipe", label: "Equipe", icon: UserCircle },
   { to: "/app/suporte", label: "Suporte", icon: MessageSquare },
-];
-
-const adminNav = [
-  { to: "/app/aprovacoes", label: "Aprovações", icon: ShieldCheck },
 ];
 
 export function AppShell() {
@@ -47,7 +43,7 @@ export function AppShell() {
     localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
 
-  const items = isAdmin ? [...nav, ...adminNav] : nav;
+  const items = nav;
 
   return (
     <div className="flex min-h-screen bg-background">
