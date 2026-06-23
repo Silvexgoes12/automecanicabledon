@@ -43,7 +43,7 @@ export function AppShell() {
     localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
 
-  const items = isAdmin ? [...nav, ...adminNav] : nav;
+  const items = nav;
 
   return (
     <div className="flex min-h-screen bg-background">
