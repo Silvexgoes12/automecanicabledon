@@ -143,7 +143,7 @@ function Dashboard() {
             </p>
           </div>
           <div className="inline-flex rounded-xl border bg-background/70 backdrop-blur p-1 shadow-sm">
-            {(["all","2024","2025"] as const).map((y) => (
+            {(["all","2024","2025","2026"] as const).map((y) => (
               <Button
                 key={y}
                 size="sm"
