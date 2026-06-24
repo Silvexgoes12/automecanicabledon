@@ -24,7 +24,7 @@ const C = ["#ea580c", "#0891b2", "#16a34a", "#d97706", "#7c3aed"];
 
 function Dashboard() {
   const [data, setData] = useState<any>(null);
-  const [year, setYear] = useState<"all" | "2024" | "2025">("all");
+  const [year, setYear] = useState<"all" | "2024" | "2025" | "2026">("all");
 
   useEffect(() => { (async () => {
     const [cli, vei, os, desp] = await Promise.all([
@@ -135,7 +135,7 @@ function Dashboard() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {year === "all" ? "Visão geral 2024 – 2025" : `Exercício ${year}`}
+              {year === "all" ? "Visão geral 2024 – 2026" : `Exercício ${year}`}
               {" · "}
               <span className={cn("font-medium", lucro >= 0 ? "text-success" : "text-destructive")}>
                 {lucro >= 0 ? "Resultado positivo" : "Resultado negativo"} de {fmtBRL(Math.abs(lucro))}
@@ -143,7 +143,7 @@ function Dashboard() {
             </p>
           </div>
           <div className="inline-flex rounded-xl border bg-background/70 backdrop-blur p-1 shadow-sm">
-            {(["all","2024","2025"] as const).map((y) => (
+            {(["all","2024","2025","2026"] as const).map((y) => (
               <Button
                 key={y}
                 size="sm"

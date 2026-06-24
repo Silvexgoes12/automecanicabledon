@@ -1,57 +1,83 @@
-# Plano: Privacidade de tickets + aba Resolvidos + aprovação de cadastros
+## Objetivo
 
-## 1. Tickets visíveis apenas ao criador e ao Admin
+Popular o ano de 2026 (Janeiro a Junho, considerando que estamos em junho/2026) em **todas as abas** do sistema — Ordens de Serviço, Despesas, Fluxo de Caixa, Pagamentos, CRM (leads e interações) — usando como base os padrões mensais de 2024 e 2025 com um leve crescimento anual. Em seguida, deixar o processo **semi-automático**: todo mês o sistema gera os dados do mês corrente a partir da média histórica dos anos anteriores.
 
-As políticas de RLS já estão corretas (`auth.uid() = user_id OR is_app_admin(auth.uid())`), mas o servidor (`listTickets`) confia na sessão e a UI mostra "todos" para qualquer um logado porque o usuário de teste provavelmente é admin.
+## Base estatística (já analisada)
 
-Ajustes:
-- Em `src/lib/support.functions.ts` → `listTickets`: garantir filtro explícito quando não-admin (`.eq("user_id", userId)`) como defesa em profundidade.
-- Em `src/routes/app.suporte.tsx`: o painel "Meus tickets" continua igual; admin vê todos com o e-mail do autor (já implementado).
+Olhando os dados atuais:
 
-## 2. Aba "Resolvidos"
+```text
+Mês     | OS 2024 | OS 2025 | Receita 2024 | Receita 2025
+Jan     |   22    |   36    |   54.685     |  106.913
+Fev     |   28    |   37    |   98.254     |  106.765
+Mar     |   37    |   40    |  117.086     |  105.598
+Abr     |   40    |   30    |  115.114     |  114.187
+Mai     |   33    |   29    |   85.815     |   85.811
+Jun     |   24    |   18    |   63.094     |   66.314
+```
 
-Na sidebar de tickets de `app.suporte.tsx`:
-- Substituir a lista única por **Tabs**: `Ativos` (status `aberto` + `respondido`) e `Resolvidos` (status `resolvido`).
-- Badge com contagem em cada aba.
-- Ao admin marcar como Resolvido (botão já existente via `setTicketStatus`), o ticket migra automaticamente para a aba Resolvidos.
+Crescimento médio 2025 vs 2024: ~+10% em receita. O modelo de 2026 aplicará **+12% sobre a média dos dois anos** para cada mês, mantendo a sazonalidade.
 
-## 3. Aprovação manual de novos cadastros
+## Escopo de dados a gerar para 2026 (Jan–Jun)
 
-Hoje qualquer usuário criado no Auth entra direto no app. Vamos introduzir um status de aprovação.
+Para cada mês de 2026:
 
-### Banco (migration)
-- Nova tabela `public.user_approvals`:
-  - `user_id uuid PK references auth.users on delete cascade`
-  - `email text`
-  - `status text check in ('pendente','aprovado','rejeitado') default 'pendente'`
-  - `requested_at timestamptz`, `decided_at timestamptz`, `decided_by uuid`
-- GRANTs: `authenticated` select próprio; `service_role` ALL.
-- RLS: usuário lê apenas a própria linha; admin (via `is_app_admin`) lê/edita todas.
-- Função `public.is_user_approved(_uid uuid) returns boolean` (SECURITY DEFINER) — true se existir linha `aprovado` OU se `is_app_admin`.
-- Trigger `on auth.users insert` → cria linha `pendente` automaticamente (e marca como `aprovado` se o e-mail já estiver em `app_admins`).
+1. **Ordens de Serviço** (`ordens_servico`)
+   - Número de OS = média(2024, 2025) do mês × 1.05, arredondado
+   - Para cada OS: cliente aleatório existente, veículo do cliente, mecânico aleatório, status "concluida" (exceto algumas "em_andamento" no mês corrente), data dentro do mês
+   - `valor_total` ≈ ticket médio histórico do mês × 1.12 ± variação aleatória
+   - `numero` sequencial continuando a partir do último
 
-### Server functions (`src/lib/approvals.functions.ts`)
-- `getMyApprovalStatus` (auth): retorna status do usuário corrente.
-- `listPendingUsers` (auth + admin): lista pendentes/rejeitados com e-mail (via `supabaseAdmin.auth.admin.getUserById`).
-- `approveUser({ userId })` / `rejectUser({ userId })` (auth + admin): atualiza status.
+2. **Itens de OS** (`os_itens`)
+   - Entre 2 e 6 itens por OS (mix de peças do catálogo e serviços), reproduzindo a proporção atual peças/serviços
 
-### UI
-- **Gate de acesso**: no layout `src/routes/_authenticated/route.tsx` (ou em `src/routes/app.tsx`) chamar `getMyApprovalStatus` após login. Se `pendente`/`rejeitado`, renderizar página "Conta aguardando aprovação" com botão de logout — bloqueia o resto do app.
-- **Nova rota admin** `src/routes/app.aprovacoes.tsx`:
-  - Lista de cadastros pendentes (e-mail, data, botões Aprovar / Rejeitar).
-  - Aba secundária com "Rejeitados" para reverter decisão.
-  - Item no menu lateral (`AppShell`) visível apenas para admin, com badge da contagem de pendentes.
+3. **Pagamentos** (`pagamentos`)
+   - 1 pagamento por OS concluída, data = data_conclusao, forma variada (PIX, cartão, dinheiro)
 
-### Comportamento
-- Usuário novo cria conta → entra → vê tela "Aguardando aprovação".
-- Admin acessa `Aprovações`, aprova → próximo login (ou refresh) libera o app.
-- Admins existentes (em `app_admins`) são auto-aprovados pelo trigger.
+4. **Despesas** (`despesas`)
+   - Recorrentes mensais (folha, aluguel, energia, água, internet, contabilidade, impostos) com valor = média histórica × 1.08
+   - Variáveis (compra de peças, manutenção, marketing, combustível) proporcionais ao volume de OS do mês
 
-## Arquivos afetados
-- `supabase/migrations/<novo>.sql` — tabela, RLS, função, trigger.
-- `src/lib/support.functions.ts` — filtro defensivo em `listTickets`.
-- `src/lib/approvals.functions.ts` — novo.
-- `src/routes/app.suporte.tsx` — Tabs Ativos/Resolvidos.
-- `src/routes/app.tsx` (ou `_authenticated/route.tsx`) — gate de aprovação.
-- `src/routes/app.aprovacoes.tsx` — nova rota admin.
-- `src/components/AppShell.tsx` — item de menu "Aprovações" (admin only).
+5. **Lançamentos de fluxo de caixa** (`lancamentos`)
+   - Entrada para cada pagamento (tipo='receita', categoria='servicos', vinculado à OS)
+   - Saída para cada despesa (tipo='despesa')
+
+6. **CRM** (`crm_leads`, `crm_interacoes`)
+   - ~5–8 novos leads por mês com estágios variados
+   - 2–4 interações por lead ativo
+
+Nenhuma alteração em `clientes`, `veiculos`, `funcionarios`, `pecas`, `servicos_catalogo`, `fornecedores` (já populados).
+
+## Execução semi-automática mensal
+
+Criar uma **função PL/pgSQL** `public.gerar_dados_mes(ano int, mes int)` que encapsula toda a lógica de geração acima, idempotente (não duplica se rodada de novo no mesmo mês — checa se já existem OS naquele mês).
+
+Agendar via **pg_cron** para rodar todo dia 1º às 03:00:
+
+```sql
+SELECT cron.schedule(
+  'gerar-dados-mes-corrente',
+  '0 3 1 * *',
+  $$ SELECT public.gerar_dados_mes(
+       extract(year  from now())::int,
+       extract(month from now())::int
+     ); $$
+);
+```
+
+Assim, em julho/2026 o sistema gera automaticamente julho, em agosto gera agosto, e assim por diante — sempre baseado na média dos anos anteriores disponíveis no banco.
+
+## Passos de implementação
+
+1. **Migração 1 — função geradora**: criar `public.gerar_dados_mes(ano, mes)` idempotente com toda a lógica acima.
+2. **Migração 2 — popular Jan–Jun/2026**: chamar a função 6× dentro da migração.
+3. **Migração 3 — agendamento pg_cron**: habilitar extensão `pg_cron` (se ainda não) e registrar o job mensal.
+4. **Sem mudanças no frontend** — as abas já leem os dados do banco e o seletor de ano do Dashboard ganhará "2026" automaticamente porque o filtro só compara prefixo de data.
+   - Pequeno ajuste opcional: adicionar "2026" ao seletor de anos no `src/routes/app.index.tsx` (hoje está fixo em `"all" | "2024" | "2025"`).
+
+## Notas técnicas
+
+- A função usa `gen_random_uuid()` e respeita todas as FKs existentes (clientes, veículos, mecânicos, peças, serviços, fornecedores já no banco).
+- A geração é determinística por mês via `setseed()` para que re-execução produza o mesmo resultado, mas com idempotência via checagem prévia.
+- Após a migração, total estimado de novos registros: ~190 OS, ~750 itens, ~190 pagamentos, ~120 despesas, ~310 lançamentos, ~40 leads, ~120 interações.
+- O Dashboard, Ordens, Fluxo de Caixa, Despesas e CRM passam a refletir 2026 imediatamente após a migração.

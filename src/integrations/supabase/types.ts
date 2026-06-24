@@ -826,6 +826,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gerar_dados_mes: {
+        Args: { p_ano: number; p_mes: number }
+        Returns: undefined
+      }
       is_app_admin: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
