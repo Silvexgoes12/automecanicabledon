@@ -135,7 +135,7 @@ function Dashboard() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {year === "all" ? "Visão geral 2024 – 2025" : `Exercício ${year}`}
+              {year === "all" ? "Visão geral 2024 – 2026" : `Exercício ${year}`}
               {" · "}
               <span className={cn("font-medium", lucro >= 0 ? "text-success" : "text-destructive")}>
                 {lucro >= 0 ? "Resultado positivo" : "Resultado negativo"} de {fmtBRL(Math.abs(lucro))}
