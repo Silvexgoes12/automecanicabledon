@@ -337,7 +337,12 @@ function SuportePage() {
               <h2 className="font-semibold flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary" /> Meus tickets
               </h2>
-              <NewTicketDialog onCreated={reload} createFn={createFn} compact />
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" variant="ghost" className="h-8" onClick={exportFiltered} disabled={exporting || loading}>
+                  <FileDown className="h-3.5 w-3.5 mr-1" /> {exporting ? "Gerando..." : "PDF"}
+                </Button>
+                <NewTicketDialog onCreated={reload} createFn={createFn} compact />
+              </div>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
