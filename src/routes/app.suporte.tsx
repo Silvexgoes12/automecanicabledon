@@ -14,8 +14,10 @@ import { toast } from "sonner";
 import {
   MessageSquare, Send, Plus, ArrowLeft, CheckCircle2, Shield, HelpCircle,
   Search, LifeBuoy, BookOpen, Mail, Clock, Sparkles, Inbox, ChevronRight,
+  FileDown,
 } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { exportTicketPdf, exportTicketsPdf } from "@/lib/support-pdf";
 import { FAQS, FAQ_CATEGORIES } from "@/lib/support-faqs";
 import {
   listTickets,
@@ -79,6 +81,30 @@ function SuportePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const exportFiltered = async () => {
+    if (!filtered.length) {
+      toast.info("Nenhum ticket para exportar nesta aba");
+      return;
+    }
+    setExporting(true);
+    try {
+      const items = [];
+      for (const t of filtered) {
+        const m: any = await msgsFn({ data: { ticketId: t.id } });
+        items.push({ ticket: t, messages: m, author: authors[t.user_id] });
+      }
+      const title =
+        tab === "duvida" ? "Dúvidas" : tab === "feedback" ? "Feedbacks" : "Resolvidos";
+      exportTicketsPdf(title, items);
+      toast.success("PDF gerado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao exportar");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -155,6 +181,11 @@ function SuportePage() {
         <Button variant="ghost" size="sm" onClick={() => { setSelected(null); reload(); }}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar para central
         </Button>
+        <div className="flex justify-end -mt-10">
+          <Button variant="outline" size="sm" onClick={() => exportTicketPdf(selected, messages, authors[selected.user_id])}>
+            <FileDown className="h-4 w-4 mr-2" /> Exportar PDF
+          </Button>
+        </div>
 
         <Card className="p-5 border-l-4 border-l-primary">
           <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -306,7 +337,12 @@ function SuportePage() {
               <h2 className="font-semibold flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary" /> Meus tickets
               </h2>
-              <NewTicketDialog onCreated={reload} createFn={createFn} compact />
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" variant="ghost" className="h-8" onClick={exportFiltered} disabled={exporting || loading}>
+                  <FileDown className="h-3.5 w-3.5 mr-1" /> {exporting ? "Gerando..." : "PDF"}
+                </Button>
+                <NewTicketDialog onCreated={reload} createFn={createFn} compact />
+              </div>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
