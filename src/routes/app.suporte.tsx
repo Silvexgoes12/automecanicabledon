@@ -157,6 +157,11 @@ function SuportePage() {
         <Button variant="ghost" size="sm" onClick={() => { setSelected(null); reload(); }}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar para central
         </Button>
+        <div className="flex justify-end -mt-10">
+          <Button variant="outline" size="sm" onClick={() => exportTicketPdf(selected, messages, authors[selected.user_id])}>
+            <FileDown className="h-4 w-4 mr-2" /> Exportar PDF
+          </Button>
+        </div>
 
         <Card className="p-5 border-l-4 border-l-primary">
           <div className="flex items-start justify-between gap-3 flex-wrap">
