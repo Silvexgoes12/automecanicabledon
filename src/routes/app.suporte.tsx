@@ -81,6 +81,30 @@ function SuportePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const exportFiltered = async () => {
+    if (!filtered.length) {
+      toast.info("Nenhum ticket para exportar nesta aba");
+      return;
+    }
+    setExporting(true);
+    try {
+      const items = [];
+      for (const t of filtered) {
+        const m: any = await msgsFn({ data: { ticketId: t.id } });
+        items.push({ ticket: t, messages: m, author: authors[t.user_id] });
+      }
+      const title =
+        tab === "duvida" ? "Dúvidas" : tab === "feedback" ? "Feedbacks" : "Resolvidos";
+      exportTicketsPdf(title, items);
+      toast.success("PDF gerado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao exportar");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
