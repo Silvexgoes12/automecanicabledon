@@ -14,8 +14,10 @@ import { toast } from "sonner";
 import {
   MessageSquare, Send, Plus, ArrowLeft, CheckCircle2, Shield, HelpCircle,
   Search, LifeBuoy, BookOpen, Mail, Clock, Sparkles, Inbox, ChevronRight,
+  FileDown,
 } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { exportTicketPdf, exportTicketsPdf } from "@/lib/support-pdf";
 import { FAQS, FAQ_CATEGORIES } from "@/lib/support-faqs";
 import {
   listTickets,
